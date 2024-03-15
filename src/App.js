@@ -1,25 +1,18 @@
-import logo from './logo.svg';
-import './App.css';
-
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+import React from "react";
+import { Route, Routes } from "react-router-dom";
+import HomePage from "./pages/Homepage";
+import UserPage from "./pages/Userpage";
+import SymptomTracker from "./pages/SymptomTracker";
+import HealthTips from "./pages/HealthTips";
+import MedicationPage from "./pages/Medicationpage";
+export default function App() {
+	return (
+		<Routes>
+			<Route exact path="/" element={<HomePage />} />
+			<Route path="/:id" element={<UserPage />} />
+			<Route exact path="symptom-tracker" element={<SymptomTracker />} />
+			<Route exact path="medication-page" element={<MedicationPage />} />
+			<Route exact path="health-tips" element={<HealthTips />} />
+		</Routes>
+	);
 }
-
-export default App;
