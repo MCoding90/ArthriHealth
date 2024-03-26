@@ -7,7 +7,6 @@ const HomePage = () => {
 			<Row className="mt-5">
 				<Col>
 					<h1>Rheumatoid Arthritis Web App</h1>
-					<p>Welcome to Rheumatoid Arthritis Web App!</p>
 				</Col>
 			</Row>
 			<Row className="mt-5">
@@ -33,7 +32,7 @@ const HomePage = () => {
 					</ul>
 				</Col>
 			</Row>
-			<Row className="mt-5">
+			{/* <Row className="mt-5">
 				<Col>
 					<Link to="/symptom-tracker" className="mr-3">
 						<Button variant="primary">Symptom Tracker</Button>
@@ -45,7 +44,7 @@ const HomePage = () => {
 						<Button variant="primary">Tips</Button>
 					</Link>
 				</Col>
-			</Row>
+			</Row> */}
 		</Container>
 	);
 };

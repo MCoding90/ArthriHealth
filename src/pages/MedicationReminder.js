@@ -7,7 +7,7 @@ const localizer = momentLocalizer(moment);
 const MedicationReminder = ({ events }) => {
 	return (
 		<div>
-			<h2>Medication Reminder</h2>
+			<h2>Track your medication intake</h2>
 			<Calendar
 				localizer={localizer}
 				events={events}

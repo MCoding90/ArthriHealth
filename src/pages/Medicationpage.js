@@ -13,7 +13,7 @@ const medicationReminders = [
 const MedicationPage = () => {
 	return (
 		<Container>
-			<h1 className="mt-3">Medication Page</h1>
+			<h1 className="mt-3">Medication Reminder</h1>
 			<MedicationReminder events={medicationReminders} />
 		</Container>
 	);
