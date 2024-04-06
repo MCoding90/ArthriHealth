@@ -32,6 +32,7 @@ const SymptomTracker = () => {
 		setSymptomInput("");
 		setDateInput("");
 		setShowAlert(false);
+		setSearchInput("");
 	};
 
 	const handleSearchInputChange = (event) => {
@@ -102,9 +103,11 @@ const SymptomTracker = () => {
 			<h3>Recorded Symptoms:</h3>
 			<ul>
 				{symptoms.map((record) => (
-					<li key={record.id}>
-						{record.symptom} - {record.date}
-					</li>
+					<React.Fragment key={record.id}>
+						<li>
+							{record.symptom} - {record.date}
+						</li>
+					</React.Fragment>
 				))}
 			</ul>
 		</div>
