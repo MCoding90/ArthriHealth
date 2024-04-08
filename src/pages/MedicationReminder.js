@@ -1,10 +1,20 @@
 import React from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
-
-const localizer = momentLocalizer(moment);
+import { Modal } from "react-bootstrap";
+import { useState } from "react";
 
 const MedicationReminder = ({ events }) => {
+	const [showModal, setShowModal] = useState(false);
+	const [selectedEvent, setSelectedEvent] = useState(null);
+
+	const localizer = momentLocalizer(moment);
+
+	const handleEventClick = (event) => {
+		setSelectedEvent(event);
+		setShowModal(true);
+	};
+
 	return (
 		<div>
 			<h2>Track your medication intake</h2>
@@ -14,7 +24,18 @@ const MedicationReminder = ({ events }) => {
 				startAccessor="start"
 				endAccessor="end"
 				style={{ height: 500 }}
+				onSelectEvent={handleEventClick}
 			/>
+			<Modal show={showModal} onHide={() => setShowModal(false)}>
+				<Modal.Header closeButton>
+					<Modal.Title>{selectedEvent?.title}</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+					<p>{selectedEvent?.notes}</p>
+					<p>Dosage: {selectedEvent?.dosage}</p>
+					<p>Time: {selectedEvent?.time}</p>
+				</Modal.Body>
+			</Modal>
 		</div>
 	);
 };
