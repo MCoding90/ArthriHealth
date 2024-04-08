@@ -3,37 +3,31 @@ import { Container, Form, Button } from "react-bootstrap";
 import MedicationReminder from "./MedicationReminder";
 
 const MedicationPage = () => {
+	const today = new Date().toISOString().slice(0, 16);
+
 	const [medicationName, setMedicationName] = useState("");
 	const [dosageNumber, setDosage] = useState("");
 	const [frequencyNumber, setFrequency] = useState("");
 	const [selectedDays, setSelectedDays] = useState([]);
-	const [startTime, setStartTime] = useState("");
+	const [startTime, setStartTime] = useState(today);
 	const [endTime, setEndTime] = useState("");
 	const [events, setEvents] = useState([
 		{ start: new Date(), end: new Date(), title: "Test Medication" },
 	]);
 
-	const today = new Date().toISOString().slice(0, 16);
-
-	const calculateNextReminders = (
-		startTime,
-		frequency,
-		endTime = new Date(startTime).setFullYear(
-			new Date(startTime).getFullYear() + 1
-		)
-	) => {
+	const calculateNextReminders = (start, frequency, end) => {
 		let reminders = [];
-		let currentDate = new Date(startTime);
-		const endDate = new Date(endTime);
+		let currentDate = new Date(start);
+		const endDate = new Date(end);
 
 		while (currentDate <= endDate) {
 			let dayOfWeek = currentDate.getDay(); // Get the day of the week
 			if (frequency === "daily") {
-				reminders.push({ date: new Date(currentDate), dayOfWeek });
+				reminders.push(new Date(currentDate));
 				currentDate.setDate(currentDate.getDate() + 1);
 			} else if (["weekly", "biweekly", "fortnightly"].includes(frequency)) {
 				if (selectedDays.includes(dayOfWeek.toString())) {
-					reminders.push({ date: new Date(currentDate), dayOfWeek });
+					reminders.push(new Date(currentDate));
 				}
 				currentDate.setDate(currentDate.getDate() + 1);
 				if (
@@ -49,21 +43,21 @@ const MedicationPage = () => {
 					currentDate.setDate(currentDate.getDate() + 14);
 				}
 			} else if (frequency === "monthly") {
-				reminders.push({ date: new Date(currentDate), dayOfWeek });
+				reminders.push(new Date(currentDate));
 				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
 		}
-		return reminders.map((reminder) => ({
-			start: reminder.date,
-			end: new Date(endTime),
+
+		return reminders.map((date) => ({
+			start: date,
+			end: new Date(end), // Ensure end date is a Date object
 			title: medicationName,
 			dosage: dosageNumber,
 			frequency: frequencyNumber,
-			dayOfWeek: reminder.dayOfWeek,
 		}));
 	};
 
-	const handleSubmit = async (e) => {
+	const handleSubmit = (e) => {
 		e.preventDefault();
 		const reminderDates = calculateNextReminders(
 			startTime,
@@ -71,15 +65,7 @@ const MedicationPage = () => {
 			endTime
 		);
 
-		const newEvents = reminderDates.map((date) => ({
-			start: date,
-			end: new Date(endTime),
-			title: medicationName,
-			dosage: dosageNumber,
-			frequency: frequencyNumber,
-		}));
-
-		setEvents((currentEvents) => [...currentEvents, ...newEvents]);
+		setEvents((currentEvents) => [...currentEvents, ...reminderDates]);
 	};
 
 	return (
