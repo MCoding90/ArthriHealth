@@ -28,12 +28,14 @@ const MedicationReminder = ({ events }) => {
 			/>
 			<Modal show={showModal} onHide={() => setShowModal(false)}>
 				<Modal.Header closeButton>
-					<Modal.Title>{selectedEvent?.title}</Modal.Title>
+					<Modal.Title>{selectedEvent?.title}</Modal.Title>{" "}
+					{/* Medication Name */}
 				</Modal.Header>
 				<Modal.Body>
-					<p>{selectedEvent?.notes}</p>
-					<p>Dosage: {selectedEvent?.dosage}</p>
-					<p>Time: {selectedEvent?.time}</p>
+					<p>Dosage: {selectedEvent?.dosage}</p> {/* Dosage */}
+					<p>Frequency: {selectedEvent?.frequency}</p> {/* Frequency */}
+					<p>Day of the Week: {selectedEvent?.dayOfWeek}</p>{" "}
+					{/* Day of the Week */}
 				</Modal.Body>
 			</Modal>
 		</div>

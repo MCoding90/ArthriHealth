@@ -3,8 +3,10 @@ import { Container, Form, Button } from "react-bootstrap";
 import MedicationReminder from "./MedicationReminder";
 
 const MedicationPage = () => {
+	// Define 'today' to use as the minimum start date
 	const today = new Date().toISOString().slice(0, 16);
 
+	// State hooks to manage form inputs and events
 	const [medicationName, setMedicationName] = useState("");
 	const [dosageNumber, setDosage] = useState("");
 	const [frequencyNumber, setFrequency] = useState("");
@@ -15,57 +17,84 @@ const MedicationPage = () => {
 		{ start: new Date(), end: new Date(), title: "Test Medication" },
 	]);
 
+	console.log("Initial events state:", events);
+
 	const calculateNextReminders = (start, frequency, end) => {
 		let reminders = [];
 		let currentDate = new Date(start);
 		const endDate = new Date(end);
 
 		while (currentDate <= endDate) {
-			let dayOfWeek = currentDate.getDay(); // Get the day of the week
+			// Daily frequency: Add a reminder for each day
 			if (frequency === "daily") {
 				reminders.push(new Date(currentDate));
-				currentDate.setDate(currentDate.getDate() + 1);
-			} else if (["weekly", "biweekly", "fortnightly"].includes(frequency)) {
-				if (selectedDays.includes(dayOfWeek.toString())) {
+			}
+			// Weekly frequency: Add a reminder for the selected days of the week
+			else if (frequency === "weekly") {
+				if (selectedDays.includes(currentDate.getDay().toString())) {
 					reminders.push(new Date(currentDate));
 				}
-				currentDate.setDate(currentDate.getDate() + 1);
-				if (
-					frequency === "biweekly" &&
-					selectedDays.includes(dayOfWeek.toString())
-				) {
-					currentDate.setDate(currentDate.getDate() + 7);
+			}
+			// Fortnightly frequency (every two weeks)
+			else if (frequency === "fortnightly") {
+				let dayIncrement = 1; // Start by checking the next day
+				while (currentDate <= endDate) {
+					if (selectedDays.includes(currentDate.getDay().toString())) {
+						reminders.push(new Date(currentDate));
+						dayIncrement = 14; // Once a match is found, skip 14 days after adding a reminder
+					}
+					currentDate.setDate(currentDate.getDate() + dayIncrement);
 				}
-				if (
-					frequency === "fortnightly" &&
-					selectedDays.includes(dayOfWeek.toString())
-				) {
-					currentDate.setDate(currentDate.getDate() + 14);
-				}
-			} else if (frequency === "monthly") {
+			}
+
+			// Monthly frequency: Add a reminder once a month
+			else if (frequency === "monthly") {
 				reminders.push(new Date(currentDate));
 				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
+
+			// Move to the next day for daily, weekly, and monthly frequencies
+			// For fortnightly, the date has already been adjusted in the loop
+			if (["daily", "weekly", "monthly"].includes(frequency)) {
+				currentDate.setDate(currentDate.getDate() + 1);
+			}
 		}
+
+		console.log("Calculated reminders:", reminders);
 
 		return reminders.map((date) => ({
 			start: date,
-			end: new Date(end), // Ensure end date is a Date object
+			end: new Date(date.getTime() + 3600000), // Assuming end is 1 hour after start
 			title: medicationName,
 			dosage: dosageNumber,
-			frequency: frequencyNumber,
+			frequency: frequency,
+			dayOfWeek: date.toLocaleString("default", { weekday: "long" }),
 		}));
 	};
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		const reminderDates = calculateNextReminders(
+		console.log("Form submitted");
+
+		const newReminders = calculateNextReminders(
 			startTime,
 			frequencyNumber,
 			endTime
 		);
+		console.log("New reminders to add:", newReminders);
 
-		setEvents((currentEvents) => [...currentEvents, ...reminderDates]);
+		setEvents((currentEvents) => {
+			const updatedEvents = [...currentEvents, ...newReminders];
+			console.log("Updated events after adding new reminders:", updatedEvents);
+			return updatedEvents;
+		});
+		// Clear the form by resetting state values to their initial states
+		setMedicationName("");
+		setDosage("");
+		setFrequency("");
+		setSelectedDays([]);
+		setStartTime(today); // Reset to 'today' or another initial value as needed
+		setEndTime("");
 	};
 
 	return (
@@ -103,13 +132,12 @@ const MedicationPage = () => {
 						<option value="">Select Frequency</option>
 						<option value="daily">Daily</option>
 						<option value="weekly">Once a Week</option>
-						<option value="biweekly">Twice a Week</option>
 						<option value="fortnightly">Every Two Weeks</option>
 						<option value="monthly">Once a Month</option>
 					</Form.Control>
 				</Form.Group>
 
-				{["weekly", "biweekly"].includes(frequencyNumber) && (
+				{["weekly", "fortnightly"].includes(frequencyNumber) && (
 					<Form.Group className="mb-3">
 						<Form.Label>Day(s) of the Week</Form.Label>
 						<Form.Control
