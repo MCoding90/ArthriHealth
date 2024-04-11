@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container, Form, Button } from "react-bootstrap";
+import { Container, Form, Button, Modal } from "react-bootstrap";
 import MedicationReminder from "./MedicationReminder";
 
 const MedicationPage = () => {
@@ -13,17 +13,18 @@ const MedicationPage = () => {
 	const [selectedDays, setSelectedDays] = useState([]);
 	const [startTime, setStartTime] = useState(today);
 	const [endTime, setEndTime] = useState("");
-	const [events, setEvents] = useState([
-		{ start: new Date(), end: new Date(), title: "Test Medication" },
-	]);
+	const [events, setEvents] = useState([]);
+	const [showSuccessModal, setShowSuccessModal] = useState(false);
 
 	console.log("Initial events state:", events);
 
+	// Function to calculate reminders based on user inputs like start time, frequency, and end time.
 	const calculateNextReminders = (start, frequency, end) => {
 		let reminders = [];
 		let currentDate = new Date(start);
 		const endDate = new Date(end);
 
+		// Loop through the date range to create reminders based on the selected frequency
 		while (currentDate <= endDate) {
 			// Daily frequency: Add a reminder for each day
 			if (frequency === "daily") {
@@ -72,6 +73,7 @@ const MedicationPage = () => {
 		}));
 	};
 
+	// Handler for form submission. Adds the new reminders to the state, clears the form, and shows the success modal
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		console.log("Form submitted");
@@ -88,6 +90,7 @@ const MedicationPage = () => {
 			console.log("Updated events after adding new reminders:", updatedEvents);
 			return updatedEvents;
 		});
+
 		// Clear the form by resetting state values to their initial states
 		setMedicationName("");
 		setDosage("");
@@ -95,6 +98,12 @@ const MedicationPage = () => {
 		setSelectedDays([]);
 		setStartTime(today); // Reset to 'today' or another initial value as needed
 		setEndTime("");
+
+		// Show the success modal
+		setShowSuccessModal(true);
+
+		// Hide the modal after 5 seconds
+		setTimeout(() => setShowSuccessModal(false), 5000);
 	};
 
 	return (
@@ -186,6 +195,21 @@ const MedicationPage = () => {
 				</Button>
 			</Form>
 			<MedicationReminder events={events} />
+			{/* Success Message Modal */}
+			<Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)}>
+				<Modal.Header closeButton>
+					<Modal.Title>Success</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>Reminder added successfully!</Modal.Body>
+				<Modal.Footer>
+					<Button
+						variant="secondary"
+						onClick={() => setShowSuccessModal(false)}
+					>
+						Close
+					</Button>
+				</Modal.Footer>
+			</Modal>
 		</Container>
 	);
 };
