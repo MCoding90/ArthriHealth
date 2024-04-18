@@ -1,5 +1,8 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
+import SignUpPage from "./pages/SignUpPage";
+import LoginPage from "./pages/LoginPage";
+import LogoutPage from "./pages/LogoutPage";
 import Layout from "./pages/Layout";
 import HomePage from "./pages/Homepage";
 import UserPage from "./pages/Userpage";
@@ -47,6 +50,30 @@ export default function App() {
 				element={
 					<Layout>
 						<HealthTips />
+					</Layout>
+				}
+			/>
+			<Route
+				path="sign-up"
+				element={
+					<Layout>
+						<SignUpPage />
+					</Layout>
+				}
+			/>
+			<Route
+				path="login"
+				element={
+					<Layout>
+						<LoginPage />
+					</Layout>
+				}
+			/>
+			<Route
+				path="logout"
+				element={
+					<Layout>
+						<LogoutPage />
 					</Layout>
 				}
 			/>

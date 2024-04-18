@@ -40,6 +40,12 @@ const Header = () => {
 						<Nav.Link as={Link} to="/social-media" style={{ color: "white" }}>
 							Social Media
 						</Nav.Link>
+						<Nav.Link as={Link} to="/login" style={{ color: "white" }}>
+							Login
+						</Nav.Link>
+						<Nav.Link as={Link} to="/signup" style={{ color: "white" }}>
+							Signup
+						</Nav.Link>
 					</Nav>
 				</Navbar.Collapse>
 			</Container>
