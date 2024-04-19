@@ -54,7 +54,7 @@ export default function App() {
 				}
 			/>
 			<Route
-				path="sign-up"
+				path="signup"
 				element={
 					<Layout>
 						<SignUpPage />

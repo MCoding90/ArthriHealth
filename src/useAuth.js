@@ -13,10 +13,11 @@ function useAuth() {
 	const auth = getAuth();
 
 	useEffect(() => {
-		const unsubscribe = onAuthStateChanged(auth, (newUser) => {
-			setUser(newUser); // Update user state when auth state changes
-		});
-		return unsubscribe; // cleanup on component unmount
+		function handleAuthChange(newUser) {
+			setUser(newUser);
+		}
+		const unsubscribe = onAuthStateChanged(auth, handleAuthChange);
+		return unsubscribe;
 	}, [auth]);
 
 	async function signup(email, password, name) {
