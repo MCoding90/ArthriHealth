@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Form, Card, Button, Alert, ListGroup } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
+import SymptomsChart from "../components/SymptomsChart";
 
 const SymptomTracker = () => {
-	const [symptoms, setSymptoms] = useState([]);
+	const [symptoms, setSymptoms] = useState(testData);
 	const [formInput, setFormInput] = useState({
 		symptom: "",
 		date: "",
@@ -129,6 +130,8 @@ const SymptomTracker = () => {
 					</Form.Group>
 				</Card.Body>
 			</Card>
+			{/* Render the SymptomsChart if they exist*/}
+			{symptoms.length > 0 && <SymptomsChart symptoms={symptoms} />}
 			<ListGroup>
 				{suggestions.length > 0 ? (
 					suggestions.map((suggestion) => (
