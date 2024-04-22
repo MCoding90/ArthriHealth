@@ -1,11 +1,21 @@
-import React from "react";
-import { Container, Card, Form, Button, Row, Col } from "react-bootstrap";
+import React, { useState } from "react";
+import {
+	Container,
+	Card,
+	Form,
+	Button,
+	Row,
+	Col,
+	Alert,
+} from "react-bootstrap";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import useAuth from "../useAuth";
 
 function SignupPage() {
 	const { signup } = useAuth();
+	const [error, setError] = useState(""); // State to handle errors
+	const [loading, setLoading] = useState(false); // State to manage loading status
 
 	// Yup validation schema
 	const schema = Yup.object().shape({
@@ -26,18 +36,26 @@ function SignupPage() {
 			<Card style={{ width: "30rem" }}>
 				<Card.Header as="h5">Sign Up</Card.Header>
 				<Card.Body>
+					{error && (
+						<Alert variant="danger" onClose={() => setError("")} dismissible>
+							{error}
+						</Alert>
+					)}
 					<Formik
 						validationSchema={schema}
 						onSubmit={(values, { setSubmitting, resetForm }) => {
+							setLoading(true);
 							signup(values.email, values.password, values.name)
 								.then(() => {
 									alert("Signup successful!");
 									resetForm();
-									setSubmitting(false);
 								})
 								.catch((error) => {
-									alert(`Signup failed: ${error.message}`);
+									setError(`Signup failed: ${error.message}`);
+								})
+								.finally(() => {
 									setSubmitting(false);
+									setLoading(false);
 								});
 						}}
 						initialValues={{
@@ -100,8 +118,12 @@ function SignupPage() {
 										</Form.Control.Feedback>
 									</Form.Group>
 								</Row>
-								<Button type="submit" style={{ marginTop: "1rem" }}>
-									Sign Up
+								<Button
+									type="submit"
+									disabled={loading}
+									style={{ marginTop: "1rem" }}
+								>
+									{loading ? "Signing Up..." : "Sign Up"}
 								</Button>
 							</Form>
 						)}

@@ -4,6 +4,7 @@ import {
 	signInWithEmailAndPassword,
 	onAuthStateChanged,
 	updateProfile,
+	sendPasswordResetEmail,
 } from "firebase/auth";
 
 import { useState, useEffect } from "react";
@@ -49,6 +50,15 @@ function useAuth() {
 		}
 	}
 
+	async function resetPassword(email) {
+		try {
+			await sendPasswordResetEmail(auth, email);
+			return { success: true, message: "Password reset email sent!" };
+		} catch (error) {
+			return { success: false, message: error.message };
+		}
+	}
+
 	async function logout() {
 		try {
 			await auth.signOut();
@@ -58,7 +68,7 @@ function useAuth() {
 		}
 	}
 
-	return { signup, login, logout, user };
+	return { signup, login, resetPassword, logout, user };
 }
 
 export default useAuth;

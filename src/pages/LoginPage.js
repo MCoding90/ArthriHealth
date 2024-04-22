@@ -1,13 +1,9 @@
-import React from "react";
-import {
-	Container,
-	Card,
-	Button,
-	Form as BootstrapForm,
-} from "react-bootstrap";
-import { Formik, Form, Field } from "formik";
+import React, { useState } from "react";
+import { Container, Card, Button, Form, Alert } from "react-bootstrap";
+import { Formik, Field } from "formik";
 import * as Yup from "yup";
 import useAuth from "../useAuth";
+import ForgotPasswordModal from "../components/ForgotPassword";
 
 const loginSchema = Yup.object().shape({
 	email: Yup.string()
@@ -17,7 +13,8 @@ const loginSchema = Yup.object().shape({
 });
 
 function LoginPage() {
-	const { login } = useAuth();
+	const { login, handleResetPassword } = useAuth();
+	const [showForgotPassword, setShowForgotPassword] = useState(false);
 
 	return (
 		<Container
@@ -32,68 +29,64 @@ function LoginPage() {
 						onSubmit={async (values, { setSubmitting, setErrors }) => {
 							try {
 								await login(values.email, values.password);
-								// Redirect or show success
+								// Handle post-login success here, such as redirecting to another page
 							} catch (error) {
 								setErrors({ submit: `Login Failed: ${error.message}` });
-								console.error("Login error:", error);
 							}
 							setSubmitting(false);
 						}}
 					>
-						{({ errors, touched, isSubmitting }) => (
-							<Form>
-								<BootstrapForm.Group className="mb-2">
-									<BootstrapForm.Label>Email address</BootstrapForm.Label>
+						{({ handleSubmit, errors, touched, isSubmitting }) => (
+							<Form noValidate onSubmit={handleSubmit}>
+								<Form.Group className="mb-3">
+									<Form.Label>Email address</Form.Label>
 									<Field
 										name="email"
 										type="email"
+										as={Form.Control}
 										placeholder="Enter email"
-										className={`form-control ${
-											touched.email && !errors.email
-												? "is-valid"
-												: touched.email && errors.email
-												? "is-invalid"
-												: ""
-										}`}
+										isInvalid={touched.email && errors.email}
 									/>
-									{touched.email && errors.email ? (
-										<div className="invalid-feedback">{errors.email}</div>
-									) : null}
-								</BootstrapForm.Group>
-								<BootstrapForm.Group className="mb-2">
-									<BootstrapForm.Label>Password</BootstrapForm.Label>
+									<Form.Control.Feedback type="invalid">
+										{errors.email}
+									</Form.Control.Feedback>
+								</Form.Group>
+								<Form.Group className="mb-3">
+									<Form.Label>Password</Form.Label>
 									<Field
 										name="password"
 										type="password"
+										as={Form.Control}
 										placeholder="Password"
-										className={`form-control ${
-											touched.password && !errors.password
-												? "is-valid"
-												: touched.password && errors.password
-												? "is-invalid"
-												: ""
-										}`}
+										isInvalid={touched.password && errors.password}
 									/>
-									{touched.password && errors.password ? (
-										<div className="invalid-feedback">{errors.password}</div>
-									) : null}
-								</BootstrapForm.Group>
+									<Form.Control.Feedback type="invalid">
+										{errors.password}
+									</Form.Control.Feedback>
+								</Form.Group>
 								{errors.submit && (
-									<div style={{ color: "red" }}>{errors.submit}</div>
+									<Alert variant="danger">{errors.submit}</Alert>
 								)}
+								<Button variant="primary" type="submit" disabled={isSubmitting}>
+									{isSubmitting ? "Logging in..." : "Login"}
+								</Button>
 								<Button
-									variant="primary"
-									type="submit"
-									className="w-75"
-									disabled={isSubmitting}
+									variant="link"
+									onClick={() => setShowForgotPassword(true)}
+									className="mt-2"
 								>
-									Login
+									Forgot Password?
 								</Button>
 							</Form>
 						)}
 					</Formik>
 				</Card.Body>
 			</Card>
+			<ForgotPasswordModal
+				show={showForgotPassword}
+				onHide={() => setShowForgotPassword(false)}
+				onResetPassword={handleResetPassword}
+			/>
 		</Container>
 	);
 }
