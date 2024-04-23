@@ -1,6 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import "../HomePage.css";
 
 const HomePage = () => {
 	const customButtonStyle = {
@@ -10,12 +11,21 @@ const HomePage = () => {
 	};
 
 	return (
-		<Container>
-			<Row className="mt-5">
-				<Col>
-					<h1>Rheumatoid Arthritis Web App</h1>
-				</Col>
-			</Row>
+		<Container fluid className="p-0">
+			<div className="hero-section">
+				<img
+					src="/images/hero.jpg"
+					alt="Manage arthritis"
+					className="hero-image"
+				/>
+				<div className="hero-content">
+					<h1>ArthriHealth</h1>
+					<p>Empower Your Daily Health Journey</p>
+					<Link to="/signup">
+						<Button variant="primary">Get Started</Button>
+					</Link>
+				</div>
+			</div>
 			<Row className="mt-5">
 				<Col>
 					<h3>Features:</h3>
@@ -51,7 +61,7 @@ const HomePage = () => {
 						</Col>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="images/education.jpg" />
+								<Card.Img variant="top" src="/images/education.jpg" />
 								<Card.Body>
 									<Card.Title>Educational Resources</Card.Title>
 									<Card.Text>
@@ -66,7 +76,7 @@ const HomePage = () => {
 						</Col>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="images/lifestyle.jpg" />
+								<Card.Img variant="top" src="/images/lifestyle.jpg" />
 								<Card.Body>
 									<Card.Title>Lifestyle Management Tools</Card.Title>
 									<Card.Text>

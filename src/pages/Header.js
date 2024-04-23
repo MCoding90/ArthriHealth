@@ -1,51 +1,69 @@
 import React from "react";
-import { Navbar, Nav, Container } from "react-bootstrap";
-import { Link } from "react-router-dom";
-
-const customNavbarStyle = {
-	backgroundColor: "rgba(0, 128, 128, 0.7)",
-	color: "white",
-};
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
+import { Link, useLocation } from "react-router-dom";
+import useAuth from "../useAuth";
+import "../Header.css";
 
 const Header = () => {
+	const location = useLocation();
+	const { logout } = useAuth();
+
+	const handleLogout = async () => {
+		try {
+			await logout();
+			// Optionally, redirect to a specific page after logging out
+		} catch (error) {
+			console.error("Logout Error:", error);
+			// Handle errors, possibly display a notification
+		}
+	};
+
 	return (
-		<Navbar style={customNavbarStyle} expand="md">
+		<Navbar expand="md" className="custom-navbar">
 			<Container>
-				<Navbar.Brand as={Link} to="/" style={{ color: "white" }}>
-					RA Web App
+				<Navbar.Brand as={Link} to="/" className="navbar-brand">
+					ArthriHealth
 				</Navbar.Brand>
-				<Navbar.Toggle
-					aria-controls="responsive-navbar-nav"
-					style={{ color: "white" }}
-				/>
+				<Navbar.Toggle aria-controls="responsive-navbar-nav" />
 				<Navbar.Collapse id="responsive-navbar-nav">
-					<Nav className="ml-auto">
-						<Nav.Link
-							as={Link}
-							to="/symptom-tracker"
-							style={{ color: "white" }}
+					<Nav className="ms-auto">
+						{[
+							{ path: "/symptom-tracker", label: "Symptom Tracker" },
+							{ path: "/medication-page", label: "Medication Reminder" },
+							{ path: "/health-tips", label: "Tips" },
+						].map((link) => (
+							<Nav.Link
+								key={link.path}
+								as={Link}
+								to={link.path}
+								className={location.pathname === link.path ? "active" : ""}
+							>
+								{link.label}
+							</Nav.Link>
+						))}
+						<NavDropdown
+							title="Account"
+							id="collasible-nav-dropdown"
+							className={
+								location.pathname.match(/\/login|\/signup/) ? "active" : ""
+							}
 						>
-							Symptom Tracker
-						</Nav.Link>
-						<Nav.Link
-							as={Link}
-							to="/medication-page"
-							style={{ color: "white" }}
-						>
-							Medication Reminder
-						</Nav.Link>
-						<Nav.Link as={Link} to="/health-tips" style={{ color: "white" }}>
-							Tips
-						</Nav.Link>
-						<Nav.Link as={Link} to="/social-media" style={{ color: "white" }}>
-							Social Media
-						</Nav.Link>
-						<Nav.Link as={Link} to="/login" style={{ color: "white" }}>
-							Login
-						</Nav.Link>
-						<Nav.Link as={Link} to="/signup" style={{ color: "white" }}>
-							Signup
-						</Nav.Link>
+							<NavDropdown.Item
+								as={Link}
+								to="/login"
+								className={location.pathname === "/login" ? "active" : ""}
+							>
+								Login
+							</NavDropdown.Item>
+							<NavDropdown.Item
+								as={Link}
+								to="/signup"
+								className={location.pathname === "/signup" ? "active" : ""}
+							>
+								Signup
+							</NavDropdown.Item>
+							<NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
+						</NavDropdown>
 					</Nav>
 				</Navbar.Collapse>
 			</Container>
