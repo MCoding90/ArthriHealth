@@ -4,44 +4,6 @@ import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
 import SymptomsChart from "../components/SymptomsChart";
 
-const testData = [
-	{
-		id: "1",
-		symptom: "Headache",
-		date: "2024-04-15",
-		severity: 5,
-		notes: "Started in the afternoon after lunch.",
-	},
-	{
-		id: "2",
-		symptom: "Nausea",
-		date: "2024-04-16",
-		severity: 3,
-		notes: "",
-	},
-	{
-		id: "3",
-		symptom: "Dizziness",
-		date: "2024-04-17",
-		severity: 4,
-		notes: "Felt dizzy when standing up quickly.",
-	},
-	{
-		id: "4",
-		symptom: "Fatigue",
-		date: "2024-04-18",
-		severity: 6,
-		notes: "Felt unusually tired throughout the day.",
-	},
-	{
-		id: "5",
-		symptom: "Muscle Pain",
-		date: "2024-04-19",
-		severity: 7,
-		notes: "Pain after gym session, especially in legs.",
-	},
-];
-
 const SymptomTracker = () => {
 	const [symptoms, setSymptoms] = useState(testData);
 	const [formInput, setFormInput] = useState({
