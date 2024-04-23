@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Container, Card, Button, Form, Alert } from "react-bootstrap";
 import { Formik, Field } from "formik";
 import * as Yup from "yup";
@@ -14,6 +15,7 @@ const loginSchema = Yup.object().shape({
 
 function LoginPage() {
 	const { login, handleResetPassword } = useAuth();
+	const navigate = useNavigate();
 	const [showForgotPassword, setShowForgotPassword] = useState(false);
 
 	return (
@@ -29,7 +31,7 @@ function LoginPage() {
 						onSubmit={async (values, { setSubmitting, setErrors }) => {
 							try {
 								await login(values.email, values.password);
-								// Handle post-login success here, such as redirecting to another page
+								navigate("/"); // Redirect to homepage after successful login
 							} catch (error) {
 								setErrors({ submit: `Login Failed: ${error.message}` });
 							}
