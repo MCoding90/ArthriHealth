@@ -5,7 +5,7 @@ import { debounce } from "lodash";
 import SymptomsChart from "../components/SymptomsChart";
 
 const SymptomTracker = () => {
-	const [symptoms, setSymptoms] = useState(testData);
+	const [symptoms, setSymptoms] = useState();
 	const [formInput, setFormInput] = useState({
 		symptom: "",
 		date: "",

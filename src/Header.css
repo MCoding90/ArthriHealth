@@ -15,7 +15,24 @@
 	font-weight: bold;
 }
 
+.nav-link .fa-icon {
+	margin-right: 5px;
+}
+
+.dropdown-icon {
+	margin-right: 0.5rem;
+}
+
 .custom-navbar .navbar-brand,
 .custom-navbar .nav-link {
 	color: white !important; /* Ensures text is white */
+}
+
+.icon-style {
+	margin-right: 10px;
+	color: rgb(255, 255, 255);
+}
+
+.title-style {
+	color: rgb(255, 255, 255);
 }

@@ -3,6 +3,23 @@ import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
 import useAuth from "../useAuth";
 import "../Header.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	faChartLine,
+	faCapsules,
+	faLightbulb,
+	faHouseMedical,
+	faSignInAlt,
+	faSignOutAlt,
+	faUserPlus,
+	faUserCircle,
+} from "@fortawesome/free-solid-svg-icons";
+
+const links = [
+	{ path: "/symptom-tracker", label: "Symptom Tracker", icon: faChartLine },
+	{ path: "/medication-page", label: "Medication Reminder", icon: faCapsules },
+	{ path: "/health-tips", label: "Tips", icon: faLightbulb },
+];
 
 const Header = () => {
 	const location = useLocation();
@@ -22,27 +39,30 @@ const Header = () => {
 		<Navbar expand="md" className="custom-navbar">
 			<Container>
 				<Navbar.Brand as={Link} to="/" className="navbar-brand">
-					ArthriHealth
+					<FontAwesomeIcon icon={faHouseMedical} className="icon-style" />
+					<span className="title-style">ArthriHealth</span>
 				</Navbar.Brand>
 				<Navbar.Toggle aria-controls="responsive-navbar-nav" />
 				<Navbar.Collapse id="responsive-navbar-nav">
 					<Nav className="ms-auto">
-						{[
-							{ path: "/symptom-tracker", label: "Symptom Tracker" },
-							{ path: "/medication-page", label: "Medication Reminder" },
-							{ path: "/health-tips", label: "Tips" },
-						].map((link) => (
+						{links.map((link) => (
 							<Nav.Link
 								key={link.path}
 								as={Link}
 								to={link.path}
 								className={location.pathname === link.path ? "active" : ""}
 							>
+								<FontAwesomeIcon icon={link.icon} className="fa-icon" />
 								{link.label}
 							</Nav.Link>
 						))}
 						<NavDropdown
-							title="Account"
+							title={
+								<span>
+									<FontAwesomeIcon icon={faUserCircle} className="fa-icon" />{" "}
+									Account
+								</span>
+							}
 							id="collasible-nav-dropdown"
 							className={
 								location.pathname.match(/\/login|\/signup/) ? "active" : ""
@@ -53,6 +73,7 @@ const Header = () => {
 								to="/login"
 								className={location.pathname === "/login" ? "active" : ""}
 							>
+								<FontAwesomeIcon icon={faSignInAlt} className="dropdown-icon" />
 								Login
 							</NavDropdown.Item>
 							<NavDropdown.Item
@@ -60,9 +81,16 @@ const Header = () => {
 								to="/signup"
 								className={location.pathname === "/signup" ? "active" : ""}
 							>
+								<FontAwesomeIcon icon={faUserPlus} className="dropdown-icon" />
 								Signup
 							</NavDropdown.Item>
-							<NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
+							<NavDropdown.Item onClick={handleLogout}>
+								<FontAwesomeIcon
+									icon={faSignOutAlt}
+									className="dropdown-icon"
+								/>
+								Logout
+							</NavDropdown.Item>
 						</NavDropdown>
 					</Nav>
 				</Navbar.Collapse>
