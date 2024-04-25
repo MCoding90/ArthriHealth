@@ -1,7 +1,7 @@
 import React from "react";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
-import useAuth from "../useAuth";
+import { useAuth } from "../context/AuthContext";
 import "../Header.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -23,16 +23,16 @@ const links = [
 
 const Header = () => {
 	const location = useLocation();
-	const { logout } = useAuth();
+	const { currentUser, logout } = useAuth();
 
-	const handleLogout = async () => {
-		try {
-			await logout();
-			// Optionally, redirect to a specific page after logging out
-		} catch (error) {
-			console.error("Logout Error:", error);
-			// Handle errors, possibly display a notification
-		}
+	const handleLogout = () => {
+		logout()
+			.then(() => {
+				console.log("Logged out successfully!");
+			})
+			.catch((error) => {
+				console.error("Logout failed: ", error);
+			});
 	};
 
 	return (
@@ -64,33 +64,42 @@ const Header = () => {
 								</span>
 							}
 							id="collasible-nav-dropdown"
-							className={
-								location.pathname.match(/\/login|\/signup/) ? "active" : ""
-							}
 						>
-							<NavDropdown.Item
-								as={Link}
-								to="/login"
-								className={location.pathname === "/login" ? "active" : ""}
-							>
-								<FontAwesomeIcon icon={faSignInAlt} className="dropdown-icon" />
-								Login
-							</NavDropdown.Item>
-							<NavDropdown.Item
-								as={Link}
-								to="/signup"
-								className={location.pathname === "/signup" ? "active" : ""}
-							>
-								<FontAwesomeIcon icon={faUserPlus} className="dropdown-icon" />
-								Signup
-							</NavDropdown.Item>
-							<NavDropdown.Item onClick={handleLogout}>
-								<FontAwesomeIcon
-									icon={faSignOutAlt}
-									className="dropdown-icon"
-								/>
-								Logout
-							</NavDropdown.Item>
+							{!currentUser && (
+								<>
+									<NavDropdown.Item
+										as={Link}
+										to="/login"
+										className={location.pathname === "/login" ? "active" : ""}
+									>
+										<FontAwesomeIcon
+											icon={faSignInAlt}
+											className="dropdown-icon"
+										/>
+										Login
+									</NavDropdown.Item>
+									<NavDropdown.Item
+										as={Link}
+										to="/signup"
+										className={location.pathname === "/signup" ? "active" : ""}
+									>
+										<FontAwesomeIcon
+											icon={faUserPlus}
+											className="dropdown-icon"
+										/>
+										Signup
+									</NavDropdown.Item>
+								</>
+							)}
+							{currentUser && (
+								<NavDropdown.Item onClick={handleLogout}>
+									<FontAwesomeIcon
+										icon={faSignOutAlt}
+										className="dropdown-icon"
+									/>
+									Logout
+								</NavDropdown.Item>
+							)}
 						</NavDropdown>
 					</Nav>
 				</Navbar.Collapse>

@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { Container, Form, Button, Modal } from "react-bootstrap";
 import MedicationReminder from "./MedicationReminder";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	faCapsules,
+	faPills,
+	faCalendarPlus,
+	faSyringe,
+	faCalendarDay,
+	faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 
 const MedicationPage = () => {
 	// Define 'today' to use as the minimum start date
@@ -108,10 +117,16 @@ const MedicationPage = () => {
 
 	return (
 		<Container>
-			<h1 className="mt-3">Medication Reminder</h1>
+			<h1 className="mt-3">
+				<FontAwesomeIcon icon={faCapsules} className="me-2" />
+				Medication Reminder
+			</h1>
 			<Form onSubmit={handleSubmit}>
 				<Form.Group className="mb-3">
-					<Form.Label>Medication Name</Form.Label>
+					<Form.Label>
+						<FontAwesomeIcon icon={faPills} className="me-2" />
+						Medication Name
+					</Form.Label>
 					<Form.Control
 						type="text"
 						value={medicationName}
@@ -121,7 +136,10 @@ const MedicationPage = () => {
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Dosage</Form.Label>
+					<Form.Label>
+						<FontAwesomeIcon icon={faSyringe} className="me-2" />
+						Dosage
+					</Form.Label>
 					<Form.Control
 						type="text"
 						value={dosageNumber}
@@ -131,7 +149,10 @@ const MedicationPage = () => {
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Frequency</Form.Label>
+					<Form.Label>
+						<FontAwesomeIcon icon={faCalendarPlus} className="me-2" />
+						Frequency
+					</Form.Label>
 					<Form.Control
 						as="select"
 						value={frequencyNumber}
@@ -148,7 +169,10 @@ const MedicationPage = () => {
 
 				{["weekly", "fortnightly"].includes(frequencyNumber) && (
 					<Form.Group className="mb-3">
-						<Form.Label>Day(s) of the Week</Form.Label>
+						<Form.Label>
+							<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
+							Day(s) of the Week
+						</Form.Label>
 						<Form.Control
 							as="select"
 							multiple
@@ -191,6 +215,7 @@ const MedicationPage = () => {
 					/>
 				</Form.Group>
 				<Button variant="primary" type="submit">
+					<FontAwesomeIcon icon={faPlus} className="me-2" />
 					Add Reminder
 				</Button>
 			</Form>

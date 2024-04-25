@@ -3,9 +3,17 @@ import { Form, Card, Button, Alert, ListGroup } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
 import SymptomsChart from "../components/SymptomsChart";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	faSearch,
+	faPlusCircle,
+	faCalendarDay,
+	faNotesMedical,
+	faTachometerAlt,
+} from "@fortawesome/free-solid-svg-icons";
 
 const SymptomTracker = () => {
-	const [symptoms, setSymptoms] = useState();
+	const [symptoms, setSymptoms] = useState([]);
 	const [formInput, setFormInput] = useState({
 		symptom: "",
 		date: "",
@@ -63,14 +71,20 @@ const SymptomTracker = () => {
 
 	return (
 		<div>
-			<h2>Symptom Tracker</h2>
+			<h2>
+				<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
+				Symptom Tracker
+			</h2>
 			{showAlert && <Alert variant="danger">Please fill in all fields.</Alert>}
 			{successMessage && <Alert variant="success">{successMessage}</Alert>}
 			<Card>
 				<Card.Body>
 					<Form onSubmit={handleSubmit}>
 						<Form.Group controlId="symptomInput">
-							<Form.Label>Enter Symptom:</Form.Label>
+							<Form.Label>
+								<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
+								Enter Symptom:
+							</Form.Label>
 							<Form.Control
 								type="text"
 								name="symptom"
@@ -81,7 +95,10 @@ const SymptomTracker = () => {
 							/>
 						</Form.Group>
 						<Form.Group controlId="dateInput">
-							<Form.Label>Enter Date:</Form.Label>
+							<Form.Label>
+								<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
+								Enter Date:
+							</Form.Label>
 							<Form.Control
 								type="date"
 								name="date"
@@ -91,7 +108,10 @@ const SymptomTracker = () => {
 							/>
 						</Form.Group>
 						<Form.Group controlId="severityInput">
-							<Form.Label>Severity (1-10):</Form.Label>
+							<Form.Label>
+								<FontAwesomeIcon icon={faTachometerAlt} className="me-2" />
+								Severity (1-10):
+							</Form.Label>
 							<Form.Control
 								type="number"
 								name="severity"
@@ -104,7 +124,10 @@ const SymptomTracker = () => {
 							/>
 						</Form.Group>
 						<Form.Group controlId="notesInput">
-							<Form.Label>Notes:</Form.Label>
+							<Form.Label>
+								<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
+								Notes:
+							</Form.Label>
 							<Form.Control
 								as="textarea"
 								name="notes"
@@ -115,12 +138,16 @@ const SymptomTracker = () => {
 								aria-label="Notes input"
 							/>
 						</Form.Group>
-						<Button variant="info" type="submit" aria-label="Submit symptom">
+						<Button variant="primary" type="submit" aria-label="Submit symptom">
+							<FontAwesomeIcon icon={faPlusCircle} className="me-2" />
 							Add Symptom
 						</Button>
 					</Form>
 					<Form.Group controlId="searchInput">
-						<Form.Label>Search Symptoms:</Form.Label>
+						<Form.Label>
+							<FontAwesomeIcon icon={faSearch} className="me-2" />
+							Search Symptoms:
+						</Form.Label>
 						<Form.Control
 							type="text"
 							placeholder="Search symptoms"
