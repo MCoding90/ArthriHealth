@@ -1,13 +1,28 @@
 import React from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../HomePage.css";
 
+const customButtonStyle = {
+	backgroundColor: "rgba(0, 128, 128, 0.7)",
+	color: "white",
+	border: "none",
+};
+
 const HomePage = () => {
-	const customButtonStyle = {
-		backgroundColor: "rgba(0, 128, 128, 0.7)",
-		color: "white",
-		border: "none",
+	const { currentUser } = useAuth();
+	const navigate = useNavigate();
+
+	const handleButtonClick = () => {
+		//console.log("Button clicked. Current user:", currentUser);
+		if (currentUser) {
+			//console.log("Navigating to dashboard.");
+			navigate("/userpage");
+		} else {
+			//console.log("Navigating to signup.");
+			navigate("/signup");
+		}
 	};
 
 	return (
@@ -21,9 +36,9 @@ const HomePage = () => {
 				<div className="hero-content">
 					<h1>ArthriHealth</h1>
 					<p>Empower Your Daily Health Journey</p>
-					<Link to="/signup">
-						<Button variant="primary">Get Started</Button>
-					</Link>
+					<Button variant="primary" onClick={handleButtonClick}>
+						{currentUser ? "Go to Dashboard" : "Get Started"}
+					</Button>
 				</div>
 			</div>
 			<Row className="mt-5">

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Card, Button, Form, Alert } from "react-bootstrap";
+import { Container, Card, Button, Form, Alert, Spinner } from "react-bootstrap";
 import { Formik, Field } from "formik";
 import * as Yup from "yup";
 import useAuth from "../useAuth";
@@ -70,7 +70,7 @@ function LoginPage() {
 									<Alert variant="danger">{errors.submit}</Alert>
 								)}
 								<Button variant="primary" type="submit" disabled={isSubmitting}>
-									{isSubmitting ? "Logging in..." : "Login"}
+									{isSubmitting ? <Spinner /> : "Login"}
 								</Button>
 								<Button
 									variant="link"
