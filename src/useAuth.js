@@ -5,6 +5,7 @@ import {
 	onAuthStateChanged,
 	updateProfile,
 	sendPasswordResetEmail,
+	sendEmailVerification
 } from "firebase/auth";
 
 import { useState, useEffect } from "react";
@@ -29,9 +30,16 @@ function useAuth() {
 				password
 			);
 			const newUser = userCredential.user;
-			await updateProfile(newUser, { displayName: name });
+			// Update profile with the display name
+			if (name) {
+				await updateProfile(newUser, { displayName: name });
+			}
+	
+			// Send email verification
+			await sendEmailVerification(newUser);
+	
 			setUser(newUser); // Update user state after signup
-			alert(`Signed up successfully: ID=${newUser.uid}`);
+			alert('Signed up successfully! Please verify your email.');
 		} catch (error) {
 			alert(`Error: ${error.message}`);
 		}
