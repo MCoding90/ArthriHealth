@@ -7,6 +7,7 @@ import LoadingSpinner from "./components/LoadingSpinner";
 
 const HomePage = lazy(() => import("./pages/Homepage"));
 const UserPage = lazy(() => import("./pages/Userpage"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
 const SymptomTracker = lazy(() => import("./pages/SymptomTracker"));
 const MedicationPage = lazy(() => import("./pages/Medicationpage"));
 const HealthTips = lazy(() => import("./pages/HealthTips"));
@@ -82,6 +83,14 @@ export default function App() {
 								element={
 									<Layout>
 										<UserPage />
+									</Layout>
+								}
+							/>
+							<Route
+								path="/profile"
+								element={
+									<Layout>
+										<UserProfile />
 									</Layout>
 								}
 							/>
