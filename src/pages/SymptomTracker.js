@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Form, Card, Button, Alert, ListGroup } from "react-bootstrap";
-import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
 import SymptomsChart from "../components/SymptomsChart";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,9 +9,25 @@ import {
 	faCalendarDay,
 	faNotesMedical,
 	faTachometerAlt,
+	faEdit,
+	faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+	getFirestore,
+	doc,
+	collection,
+	addDoc,
+	query,
+	where,
+	updateDoc,
+	deleteDoc,
+	onSnapshot,
+} from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 const SymptomTracker = () => {
+	const { currentUser } = useAuth();
+	const db = getFirestore();
 	const [symptoms, setSymptoms] = useState([]);
 	const [formInput, setFormInput] = useState({
 		symptom: "",
@@ -20,39 +35,32 @@ const SymptomTracker = () => {
 		severity: "",
 		notes: "",
 	});
+	const [editing, setEditing] = useState(false);
+	const [currentId, setCurrentId] = useState(null);
 	const [showAlert, setShowAlert] = useState(false);
 	const [successMessage, setSuccessMessage] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [suggestions, setSuggestions] = useState([]);
 
-	const handleInputChange = (event) => {
-		const { name, value } = event.target;
-		setFormInput((prevState) => ({
-			...prevState,
-			[name]: value,
-		}));
-	};
+	useEffect(() => {
+		if (currentUser) {
+			const symptomsRef = collection(db, "Users", currentUser.uid, "symptoms");
+			const q = query(symptomsRef, where("user", "==", currentUser.uid));
+			const unsubscribe = onSnapshot(q, (querySnapshot) => {
+				const symptomsData = querySnapshot.docs.map((doc) => ({
+					id: doc.id,
+					...doc.data(),
+				}));
+				setSymptoms(symptomsData);
+			});
 
-	const handleSubmit = (event) => {
-		event.preventDefault();
-		if (!formInput.symptom || !formInput.date) {
-			setShowAlert(true);
-			return;
+			return () => unsubscribe();
 		}
-		setSymptoms((prevSymptoms) => [
-			...prevSymptoms,
-			{ id: uuidv4(), ...formInput },
-		]);
-		setFormInput({ symptom: "", date: "", severity: "", notes: "" });
-		setShowAlert(false);
-		setSuccessMessage("Symptom added successfully!");
-		setTimeout(() => setSuccessMessage(""), 3000);
-		setSearchInput("");
-	};
+	}, [currentUser, db]);
 
 	useEffect(() => {
 		const handleSearch = debounce(() => {
-			if (searchInput) {
+			if (searchInput.trim()) {
 				const filteredSuggestions = symptoms.filter((symptom) =>
 					symptom.symptom.toLowerCase().includes(searchInput.toLowerCase())
 				);
@@ -62,11 +70,62 @@ const SymptomTracker = () => {
 			}
 		}, 300);
 		handleSearch();
-		return () => handleSearch.cancel(); // Cleanup debounce
+		return () => handleSearch.cancel();
 	}, [searchInput, symptoms]);
 
-	const handleDelete = (id) => {
-		setSymptoms(symptoms.filter((symptom) => symptom.id !== id));
+	const handleInputChange = (event) => {
+		const { name, value } = event.target;
+		setFormInput((prevState) => ({
+			...prevState,
+			[name]: value,
+		}));
+	};
+
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		if (!formInput.symptom || !formInput.date) {
+			setShowAlert(true);
+			return;
+		}
+
+		if (editing) {
+			const symptomRef = doc(
+				db,
+				"Users",
+				currentUser.uid,
+				"symptoms",
+				currentId
+			);
+			await updateDoc(symptomRef, formInput);
+			setSuccessMessage("Symptom updated successfully!");
+			setEditing(false);
+			setCurrentId(null);
+		} else {
+			const newSymptom = {
+				...formInput,
+				user: currentUser.uid,
+			};
+			await addDoc(
+				collection(db, "Users", currentUser.uid, "symptoms"),
+				newSymptom
+			);
+			setSuccessMessage("Symptom added successfully!");
+		}
+
+		setFormInput({ symptom: "", date: "", severity: "", notes: "" });
+		setShowAlert(false);
+		setTimeout(() => setSuccessMessage(""), 3000);
+		setSearchInput("");
+	};
+
+	const handleEdit = (symptom) => {
+		setFormInput(symptom);
+		setEditing(true);
+		setCurrentId(symptom.id);
+	};
+
+	const handleDelete = async (id) => {
+		await deleteDoc(doc(db, "Users", currentUser.uid, "symptoms", id));
 	};
 
 	return (
@@ -140,7 +199,7 @@ const SymptomTracker = () => {
 						</Form.Group>
 						<Button variant="primary" type="submit" aria-label="Submit symptom">
 							<FontAwesomeIcon icon={faPlusCircle} className="me-2" />
-							Add Symptom
+							{editing ? "Update Symptom" : "Add Symptom"}
 						</Button>
 					</Form>
 					<Form.Group controlId="searchInput">
@@ -151,13 +210,13 @@ const SymptomTracker = () => {
 						<Form.Control
 							type="text"
 							placeholder="Search symptoms"
+							value={searchInput}
 							onChange={(e) => setSearchInput(e.target.value)}
 							aria-label="Search symptoms"
 						/>
 					</Form.Group>
 				</Card.Body>
 			</Card>
-			{/* Render the SymptomsChart if they exist*/}
 			{symptoms.length > 0 && <SymptomsChart symptoms={symptoms} />}
 			<ListGroup>
 				{suggestions.length > 0 ? (
@@ -184,7 +243,15 @@ const SymptomTracker = () => {
 								style={{ float: "right" }}
 								aria-label={`Delete symptom recorded on ${record.date}`}
 							>
-								Delete
+								<FontAwesomeIcon icon={faTrash} />
+							</Button>
+							<Button
+								variant="secondary"
+								onClick={() => handleEdit(record)}
+								style={{ float: "right", marginRight: "10px" }}
+								aria-label={`Edit symptom recorded on ${record.date}`}
+							>
+								<FontAwesomeIcon icon={faEdit} />
 							</Button>
 						</ListGroup.Item>
 					))

@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Form, Button, Modal } from "react-bootstrap";
-import MedicationReminder from "./MedicationReminder";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faCapsules,
@@ -10,12 +9,23 @@ import {
 	faCalendarDay,
 	faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+import MedicationReminder from "./MedicationReminder";
+import {
+	getFirestore,
+	collection,
+	addDoc,
+	query,
+	orderBy,
+	onSnapshot,
+} from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 const MedicationPage = () => {
-	// Define 'today' to use as the minimum start date
+	const { currentUser } = useAuth(); // Use the currentUser from AuthContext
+	const db = getFirestore();
+
 	const today = new Date().toISOString().slice(0, 16);
 
-	// State hooks to manage form inputs and events
 	const [medicationName, setMedicationName] = useState("");
 	const [dosageNumber, setDosage] = useState("");
 	const [frequencyNumber, setFrequency] = useState("");
@@ -25,94 +35,103 @@ const MedicationPage = () => {
 	const [events, setEvents] = useState([]);
 	const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-	console.log("Initial events state:", events);
+	useEffect(() => {
+		if (currentUser) {
+			const medsRef = collection(db, `Users/${currentUser.uid}/medications`);
+			const q = query(medsRef, orderBy("start", "asc"));
+			const unsubscribe = onSnapshot(
+				q,
+				(querySnapshot) => {
+					const fetchedEvents = querySnapshot.docs.map((doc) => ({
+						id: doc.id,
+						...doc.data(),
+						start: doc.data().start.toDate(), // Convert Timestamp to Date
+						end: doc.data().end.toDate(),
+					}));
+					setEvents(fetchedEvents);
+				},
+				(error) => {
+					//console.error("Error fetching medication reminders:", error);
+				}
+			);
 
-	// Function to calculate reminders based on user inputs like start time, frequency, and end time.
+			return () => unsubscribe();
+		}
+	}, [currentUser, db]);
+
 	const calculateNextReminders = (start, frequency, end) => {
 		let reminders = [];
 		let currentDate = new Date(start);
 		const endDate = new Date(end);
 
-		// Loop through the date range to create reminders based on the selected frequency
 		while (currentDate <= endDate) {
-			// Daily frequency: Add a reminder for each day
 			if (frequency === "daily") {
 				reminders.push(new Date(currentDate));
-			}
-			// Weekly frequency: Add a reminder for the selected days of the week
-			else if (frequency === "weekly") {
-				if (selectedDays.includes(currentDate.getDay().toString())) {
-					reminders.push(new Date(currentDate));
-				}
-			}
-			// Fortnightly frequency (every two weeks)
-			else if (frequency === "fortnightly") {
-				let dayIncrement = 1; // Start by checking the next day
-				while (currentDate <= endDate) {
-					if (selectedDays.includes(currentDate.getDay().toString())) {
-						reminders.push(new Date(currentDate));
-						dayIncrement = 14; // Once a match is found, skip 14 days after adding a reminder
+			} else if (["weekly", "fortnightly"].includes(frequency)) {
+				const dayIncrement = frequency === "fortnightly" ? 14 : 7;
+				selectedDays.forEach((day) => {
+					let currentDay = new Date(currentDate);
+					currentDay.setDate(
+						currentDay.getDate() + ((day - currentDay.getDay() + 7) % 7)
+					);
+					while (currentDay <= endDate) {
+						reminders.push(new Date(currentDay));
+						currentDay.setDate(currentDay.getDate() + dayIncrement);
 					}
-					currentDate.setDate(currentDate.getDate() + dayIncrement);
+				});
+				break;
+			} else if (frequency === "monthly") {
+				while (currentDate <= endDate) {
+					reminders.push(new Date(currentDate));
+					currentDate.setMonth(currentDate.getMonth() + 1);
 				}
+				break;
 			}
-
-			// Monthly frequency: Add a reminder once a month
-			else if (frequency === "monthly") {
-				reminders.push(new Date(currentDate));
-				currentDate.setMonth(currentDate.getMonth() + 1);
-			}
-
-			// Move to the next day for daily, weekly, and monthly frequencies
-			// For fortnightly, the date has already been adjusted in the loop
-			if (["daily", "weekly", "monthly"].includes(frequency)) {
-				currentDate.setDate(currentDate.getDate() + 1);
-			}
+			currentDate.setDate(currentDate.getDate() + 1);
 		}
-
-		console.log("Calculated reminders:", reminders);
 
 		return reminders.map((date) => ({
 			start: date,
-			end: new Date(date.getTime() + 3600000), // Assuming end is 1 hour after start
+			end: new Date(date.getTime() + 3600000),
 			title: medicationName,
 			dosage: dosageNumber,
-			frequency: frequency,
+			frequency: frequencyNumber,
 			dayOfWeek: date.toLocaleString("default", { weekday: "long" }),
 		}));
 	};
 
-	// Handler for form submission. Adds the new reminders to the state, clears the form, and shows the success modal
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
-		console.log("Form submitted");
-
 		const newReminders = calculateNextReminders(
 			startTime,
 			frequencyNumber,
 			endTime
 		);
-		console.log("New reminders to add:", newReminders);
 
-		setEvents((currentEvents) => {
-			const updatedEvents = [...currentEvents, ...newReminders];
-			console.log("Updated events after adding new reminders:", updatedEvents);
-			return updatedEvents;
-		});
+		try {
+			await Promise.all(
+				newReminders.map((reminder) =>
+					addDoc(
+						collection(db, `Users/${currentUser.uid}/medications`),
+						reminder
+					)
+				)
+			);
+			setShowSuccessModal(true);
+			setTimeout(() => setShowSuccessModal(false), 3000);
+			resetForm();
+		} catch (error) {
+			//console.error("Error adding medication reminder:", error);
+		}
+	};
 
-		// Clear the form by resetting state values to their initial states
+	const resetForm = () => {
 		setMedicationName("");
 		setDosage("");
 		setFrequency("");
 		setSelectedDays([]);
-		setStartTime(today); // Reset to 'today' or another initial value as needed
+		setStartTime(today);
 		setEndTime("");
-
-		// Show the success modal
-		setShowSuccessModal(true);
-
-		// Hide the modal after 5 seconds
-		setTimeout(() => setShowSuccessModal(false), 5000);
 	};
 
 	return (
@@ -166,7 +185,6 @@ const MedicationPage = () => {
 						<option value="monthly">Once a Month</option>
 					</Form.Control>
 				</Form.Group>
-
 				{["weekly", "fortnightly"].includes(frequencyNumber) && (
 					<Form.Group className="mb-3">
 						<Form.Label>
@@ -201,7 +219,7 @@ const MedicationPage = () => {
 						value={startTime}
 						onChange={(e) => setStartTime(e.target.value)}
 						required
-						min={today} // Sets the min attribute
+						min={today}
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
@@ -211,7 +229,7 @@ const MedicationPage = () => {
 						value={endTime}
 						onChange={(e) => setEndTime(e.target.value)}
 						required
-						min={startTime || today} // Sets the min attribute to startTime or today if startTime is not set
+						min={startTime || today}
 					/>
 				</Form.Group>
 				<Button variant="primary" type="submit">
@@ -220,7 +238,6 @@ const MedicationPage = () => {
 				</Button>
 			</Form>
 			<MedicationReminder events={events} />
-			{/* Success Message Modal */}
 			<Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)}>
 				<Modal.Header closeButton>
 					<Modal.Title>Success</Modal.Title>

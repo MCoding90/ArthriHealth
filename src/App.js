@@ -10,6 +10,7 @@ const UserPage = lazy(() => import("./pages/Userpage"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const SymptomTracker = lazy(() => import("./pages/SymptomTracker"));
 const MedicationPage = lazy(() => import("./pages/Medicationpage"));
+const LifeStylePage = lazy(() => import("./pages/LifeStyle"));
 const HealthTips = lazy(() => import("./pages/HealthTips"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -26,6 +27,14 @@ export default function App() {
 							element={
 								<Layout>
 									<HomePage />
+								</Layout>
+							}
+						/>
+						<Route
+							path="/lifestyle-management"
+							element={
+								<Layout>
+									<LifeStylePage />
 								</Layout>
 							}
 						/>

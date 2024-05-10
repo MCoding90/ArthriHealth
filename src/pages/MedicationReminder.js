@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
-import { Modal } from "react-bootstrap";
-import { useState } from "react";
+import { Modal, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import PropTypes from "prop-types";
 import {
 	faPrescriptionBottleMedical,
 	faPills,
@@ -14,13 +14,16 @@ import {
 const MedicationReminder = ({ events }) => {
 	const [showModal, setShowModal] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState(null);
-
 	const localizer = momentLocalizer(moment);
 
 	const handleEventClick = (event) => {
 		setSelectedEvent(event);
 		setShowModal(true);
 	};
+
+	if (!events.length) {
+		return <Alert variant="info">No medication reminders to display.</Alert>;
+	}
 
 	return (
 		<div>
@@ -42,8 +45,7 @@ const MedicationReminder = ({ events }) => {
 							aria-hidden="true"
 						/>
 						{selectedEvent?.title}
-					</Modal.Title>{" "}
-					{/* Medication Name */}
+					</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
 					<p>
@@ -70,11 +72,14 @@ const MedicationReminder = ({ events }) => {
 						/>
 						Day of the Week: {selectedEvent?.dayOfWeek}
 					</p>
-					{/* Day of the Week */}
 				</Modal.Body>
 			</Modal>
 		</div>
 	);
+};
+
+MedicationReminder.propTypes = {
+	events: PropTypes.array.isRequired,
 };
 
 export default MedicationReminder;
