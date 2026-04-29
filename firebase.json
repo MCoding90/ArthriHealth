@@ -4,6 +4,7 @@
 		"indexes": "firestore.indexes.json"
 	},
 	"hosting": {
+		"site": "myapp-8439e",
 		"public": "build",
 		"headers": [
 			{
