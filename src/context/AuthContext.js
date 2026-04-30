@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "../firebase-Config"; // use initialized auth
 
 const AuthContext = createContext();
 
@@ -12,11 +13,8 @@ export const AuthProvider = ({ children }) => {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		const auth = getAuth();
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
-			//console.log("Auth state changed: ", user);
 			setCurrentUser(user);
-			//console.log("After setCurrentUser call: ", user);
 			setLoading(false);
 		});
 
@@ -24,7 +22,7 @@ export const AuthProvider = ({ children }) => {
 	}, []);
 
 	const logout = () => {
-		return signOut(getAuth());
+		return signOut(auth); //use initialized auth
 	};
 
 	const value = {

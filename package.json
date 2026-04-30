@@ -26,6 +26,8 @@
 		"yup": "^1.4.0"
 	},
 	"scripts": {
+		"dev": "concurrently \"npm run emulator:prod\" \"npm start\"",
+		"emulator:prod": "firebase emulators:start --import=./local-prod",
 		"start": "react-scripts start",
 		"build": "react-scripts build",
 		"test": "react-scripts test",
@@ -50,6 +52,7 @@
 		]
 	},
 	"devDependencies": {
-		"@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+		"concurrently": "^9.2.1"
 	}
 }

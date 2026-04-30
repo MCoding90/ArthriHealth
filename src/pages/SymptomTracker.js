@@ -22,12 +22,42 @@ import {
 	updateDoc,
 	deleteDoc,
 	onSnapshot,
+	Timestamp,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+
+const severityBadge = (value) => {
+	const num = Number(value);
+
+	let bg = "secondary";
+
+	if (num <= 3)
+		bg = "success"; // green
+	else if (num <= 6)
+		bg = "warning"; // orange
+	else bg = "danger"; // red
+
+	return (
+		<span
+			className={`badge bg-${bg}`}
+			style={{ fontSize: "0.85rem", marginLeft: "6px" }}
+		>
+			{num}
+		</span>
+	);
+};
+
+// Safe timestamp → JS Date
+const toDateSafe = (ts) => {
+	if (!ts) return null;
+	if (ts.toDate) return ts.toDate();
+	return new Date(ts);
+};
 
 const SymptomTracker = () => {
 	const { currentUser } = useAuth();
 	const db = getFirestore();
+
 	const [symptoms, setSymptoms] = useState([]);
 	const [formInput, setFormInput] = useState({
 		symptom: "",
@@ -42,73 +72,94 @@ const SymptomTracker = () => {
 	const [searchInput, setSearchInput] = useState("");
 	const [suggestions, setSuggestions] = useState([]);
 
+	// Pagination
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 10;
+
+	// -----------------------------
+	// REAL-TIME FIRESTORE LISTENER
+	// -----------------------------
 	useEffect(() => {
-		if (currentUser) {
-			const symptomsRef = collection(db, "Users", currentUser.uid, "symptoms");
-			const q = query(symptomsRef, where("user", "==", currentUser.uid));
-			const unsubscribe = onSnapshot(q, (querySnapshot) => {
-				const symptomsData = querySnapshot.docs.map((doc) => ({
-					id: doc.id,
-					...doc.data(),
-				}));
-				setSymptoms(symptomsData);
+		if (!currentUser) return;
+
+		const symptomsRef = collection(db, "symptoms");
+		const q = query(symptomsRef, where("userId", "==", currentUser.uid));
+
+		const unsubscribe = onSnapshot(q, (querySnapshot) => {
+			const symptomsData = querySnapshot.docs.map((docSnap) => {
+				const data = docSnap.data();
+
+				return {
+					id: docSnap.id,
+					symptom: data.symptom || data.type || "Unknown symptom",
+					severity: Number(data.severity) || 0,
+					notes: data.notes || "",
+					date: data.date || data.timestamp || null,
+				};
 			});
 
-			return () => unsubscribe();
-		}
+			setSymptoms(symptomsData);
+		});
+
+		return () => unsubscribe();
 	}, [currentUser, db]);
 
+	// -----------------------------
+	// SEARCH (SAFE)
+	// -----------------------------
 	useEffect(() => {
 		const handleSearch = debounce(() => {
 			if (searchInput.trim()) {
-				const filteredSuggestions = symptoms.filter((symptom) =>
-					symptom.symptom.toLowerCase().includes(searchInput.toLowerCase())
+				const filtered = symptoms.filter((s) =>
+					(s.symptom || "").toLowerCase().includes(searchInput.toLowerCase()),
 				);
-				setSuggestions(filteredSuggestions);
+				setSuggestions(filtered);
 			} else {
 				setSuggestions([]);
 			}
+
+			setCurrentPage(1); // reset pagination on search
 		}, 300);
+
 		handleSearch();
 		return () => handleSearch.cancel();
 	}, [searchInput, symptoms]);
 
+	// -----------------------------
+	// FORM HANDLERS
+	// -----------------------------
 	const handleInputChange = (event) => {
 		const { name, value } = event.target;
-		setFormInput((prevState) => ({
-			...prevState,
-			[name]: value,
-		}));
+		setFormInput((prev) => ({ ...prev, [name]: value }));
 	};
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
+
 		if (!formInput.symptom || !formInput.date) {
 			setShowAlert(true);
 			return;
 		}
 
+		const dateObj = Timestamp.fromDate(new Date(formInput.date));
+
 		if (editing) {
-			const symptomRef = doc(
-				db,
-				"Users",
-				currentUser.uid,
-				"symptoms",
-				currentId
-			);
-			await updateDoc(symptomRef, formInput);
-			setSuccessMessage("Symptom updated successfully!");
-			setEditing(false);
-			setCurrentId(null);
+			const symptomRef = doc(db, "symptoms", currentId);
+			await updateDoc(symptomRef, {
+				symptom: formInput.symptom,
+				severity: Number(formInput.severity),
+				notes: formInput.notes || "",
+				date: dateObj,
+			});
 		} else {
-			const newSymptom = {
-				...formInput,
-				user: currentUser.uid,
-			};
-			await addDoc(
-				collection(db, "Users", currentUser.uid, "symptoms"),
-				newSymptom
-			);
+			await addDoc(collection(db, "symptoms"), {
+				userId: currentUser.uid,
+				symptom: formInput.symptom,
+				severity: Number(formInput.severity),
+				notes: formInput.notes || "",
+				date: dateObj,
+			});
+
 			setSuccessMessage("Symptom added successfully!");
 		}
 
@@ -116,26 +167,48 @@ const SymptomTracker = () => {
 		setShowAlert(false);
 		setTimeout(() => setSuccessMessage(""), 3000);
 		setSearchInput("");
+		setEditing(false);
 	};
 
 	const handleEdit = (symptom) => {
-		setFormInput(symptom);
+		setFormInput({
+			symptom: symptom.symptom,
+			date: toDateSafe(symptom.date)?.toISOString().split("T")[0] || "",
+			severity: symptom.severity?.toString() || "1",
+			notes: symptom.notes || "",
+		});
 		setEditing(true);
 		setCurrentId(symptom.id);
 	};
 
 	const handleDelete = async (id) => {
-		await deleteDoc(doc(db, "Users", currentUser.uid, "symptoms", id));
+		await deleteDoc(doc(db, "symptoms", id));
 	};
 
+	// -----------------------------
+	// PAGINATION LOGIC
+	// -----------------------------
+	const listToShow = searchInput.trim() ? suggestions : symptoms;
+
+	const indexOfLast = currentPage * itemsPerPage;
+	const indexOfFirst = indexOfLast - itemsPerPage;
+	const paginatedSymptoms = listToShow.slice(indexOfFirst, indexOfLast);
+
+	const totalPages = Math.ceil(listToShow.length / itemsPerPage);
+
+	// -----------------------------
+	// RENDER
+	// -----------------------------
 	return (
 		<div>
 			<h2>
 				<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
 				Symptom Tracker
 			</h2>
+
 			{showAlert && <Alert variant="danger">Please fill in all fields.</Alert>}
 			{successMessage && <Alert variant="success">{successMessage}</Alert>}
+
 			<Card>
 				<Card.Body>
 					<Form onSubmit={handleSubmit}>
@@ -150,9 +223,9 @@ const SymptomTracker = () => {
 								placeholder="Enter symptom"
 								value={formInput.symptom}
 								onChange={handleInputChange}
-								aria-label="Symptom input"
 							/>
 						</Form.Group>
+
 						<Form.Group controlId="dateInput">
 							<Form.Label>
 								<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
@@ -163,25 +236,24 @@ const SymptomTracker = () => {
 								name="date"
 								value={formInput.date}
 								onChange={handleInputChange}
-								aria-label="Date input"
 							/>
 						</Form.Group>
+
 						<Form.Group controlId="severityInput">
 							<Form.Label>
 								<FontAwesomeIcon icon={faTachometerAlt} className="me-2" />
-								Severity (1-10):
+								Severity (1–10):
 							</Form.Label>
 							<Form.Control
 								type="number"
 								name="severity"
-								placeholder="Enter severity level"
-								value={formInput.severity}
-								onChange={handleInputChange}
 								min="1"
 								max="10"
-								aria-label="Severity input"
+								value={formInput.severity}
+								onChange={handleInputChange}
 							/>
 						</Form.Group>
+
 						<Form.Group controlId="notesInput">
 							<Form.Label>
 								<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
@@ -190,19 +262,19 @@ const SymptomTracker = () => {
 							<Form.Control
 								as="textarea"
 								name="notes"
-								placeholder="Additional notes"
+								rows={3}
 								value={formInput.notes}
 								onChange={handleInputChange}
-								rows={3}
-								aria-label="Notes input"
 							/>
 						</Form.Group>
-						<Button variant="primary" type="submit" aria-label="Submit symptom">
+
+						<Button variant="primary" type="submit">
 							<FontAwesomeIcon icon={faPlusCircle} className="me-2" />
 							{editing ? "Update Symptom" : "Add Symptom"}
 						</Button>
 					</Form>
-					<Form.Group controlId="searchInput">
+
+					<Form.Group controlId="searchInput" className="mt-3">
 						<Form.Label>
 							<FontAwesomeIcon icon={faSearch} className="me-2" />
 							Search Symptoms:
@@ -212,53 +284,68 @@ const SymptomTracker = () => {
 							placeholder="Search symptoms"
 							value={searchInput}
 							onChange={(e) => setSearchInput(e.target.value)}
-							aria-label="Search symptoms"
 						/>
 					</Form.Group>
 				</Card.Body>
 			</Card>
+
 			{symptoms.length > 0 && <SymptomsChart symptoms={symptoms} />}
-			<ListGroup>
-				{suggestions.length > 0 ? (
-					suggestions.map((suggestion) => (
-						<ListGroup.Item
-							key={suggestion.id}
-							onClick={() => setSearchInput(suggestion.symptom)}
-							aria-label={`Select suggestion: ${suggestion.symptom} recorded on ${suggestion.date}`}
+
+			<ListGroup className="mt-3">
+				{paginatedSymptoms.map((record) => (
+					<ListGroup.Item key={record.id}>
+						<strong>{record.symptom}</strong> —{" "}
+						{toDateSafe(record.date)?.toLocaleDateString() || "No date"} —{" "}
+						Severity: {severityBadge(record.severity)}
+						{record.notes && ` — Notes: ${record.notes}`}
+						<Button
+							variant="danger"
+							onClick={() => handleDelete(record.id)}
+							style={{ float: "right" }}
 						>
-							{suggestion.symptom} - {suggestion.date}
-						</ListGroup.Item>
-					))
-				) : symptoms.length > 0 ? (
-					symptoms.map((record) => (
-						<ListGroup.Item
-							key={record.id}
-							aria-label={`Symptom: ${record.symptom}, Date: ${record.date}, Severity: ${record.severity}, Notes: ${record.notes}`}
+							<FontAwesomeIcon icon={faTrash} />
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={() => handleEdit(record)}
+							style={{ float: "right", marginRight: "10px" }}
 						>
-							{record.symptom} - {record.date} - Severity: {record.severity}
-							{record.notes && ` - Notes: ${record.notes}`}
-							<Button
-								variant="danger"
-								onClick={() => handleDelete(record.id)}
-								style={{ float: "right" }}
-								aria-label={`Delete symptom recorded on ${record.date}`}
-							>
-								<FontAwesomeIcon icon={faTrash} />
-							</Button>
-							<Button
-								variant="secondary"
-								onClick={() => handleEdit(record)}
-								style={{ float: "right", marginRight: "10px" }}
-								aria-label={`Edit symptom recorded on ${record.date}`}
-							>
-								<FontAwesomeIcon icon={faEdit} />
-							</Button>
-						</ListGroup.Item>
-					))
-				) : (
+							<FontAwesomeIcon icon={faEdit} />
+						</Button>
+					</ListGroup.Item>
+				))}
+
+				{symptoms.length === 0 && (
 					<Alert variant="info">No symptoms logged.</Alert>
 				)}
 			</ListGroup>
+
+			{/* PAGINATION CONTROLS */}
+			{totalPages > 1 && (
+				<div className="d-flex justify-content-center mt-3">
+					<Button
+						variant="secondary"
+						disabled={currentPage === 1}
+						onClick={() => setCurrentPage((p) => p - 1)}
+						className="me-2"
+					>
+						Previous
+					</Button>
+
+					<span style={{ paddingTop: "6px" }}>
+						Page {currentPage} of {totalPages}
+					</span>
+
+					<Button
+						variant="secondary"
+						disabled={currentPage === totalPages}
+						onClick={() => setCurrentPage((p) => p + 1)}
+						className="ms-2"
+					>
+						Next
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 };

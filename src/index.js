@@ -3,11 +3,13 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { initializeApp } from "firebase/app";
-import firebaseConfig from "./firebase-Config";
-
-initializeApp(firebaseConfig);
+import { AuthProvider } from "./context/AuthContext";
 
 const container = document.getElementById("root");
 const root = createRoot(container);
-root.render(<App />);
+
+root.render(
+	<AuthProvider>
+		<App />
+	</AuthProvider>,
+);

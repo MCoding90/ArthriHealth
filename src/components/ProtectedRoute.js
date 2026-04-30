@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = () => {
 	const { currentUser } = useAuth(); // this hook is fetching the current user's authentication status
-	const isAuthenticated = currentUser && currentUser.emailVerified;
+	const isAuthenticated = currentUser;
 
 	//console.log("Checking authentication: ", isAuthenticated);
 	return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;

@@ -1,9 +1,40 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2024, 6, 3);
+
+    // -------------------------
+    // USERS COLLECTION
+    // -------------------------
+    match /Users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // -------------------------
+    // SYMPTOMS COLLECTION
+    // -------------------------
+    match /symptoms/{symptomId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // -------------------------
+    // MEDICATIONS COLLECTION
+    // -------------------------
+    match /medications/{medId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
     }
   }
 }

@@ -15,13 +15,21 @@ import {
 	collection,
 	addDoc,
 	query,
+	where,
 	orderBy,
 	onSnapshot,
+	Timestamp,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
+const toDateSafe = (ts) => {
+	if (!ts) return null;
+	if (ts.toDate) return ts.toDate();
+	return new Date(ts);
+};
+
 const MedicationPage = () => {
-	const { currentUser } = useAuth(); // Use the currentUser from AuthContext
+	const { currentUser } = useAuth();
 	const db = getFirestore();
 
 	const today = new Date().toISOString().slice(0, 16);
@@ -35,32 +43,46 @@ const MedicationPage = () => {
 	const [events, setEvents] = useState([]);
 	const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+	// -----------------------------
+	// LISTENER (Firestore)
+	// -----------------------------
 	useEffect(() => {
-		if (currentUser) {
-			const medsRef = collection(db, `Users/${currentUser.uid}/medications`);
-			const q = query(medsRef, orderBy("start", "asc"));
-			const unsubscribe = onSnapshot(
-				q,
-				(querySnapshot) => {
-					const fetchedEvents = querySnapshot.docs.map((doc) => ({
-						id: doc.id,
-						...doc.data(),
-						start: doc.data().start.toDate(), // Convert Timestamp to Date
-						end: doc.data().end.toDate(),
-					}));
-					setEvents(fetchedEvents);
-				},
-				(error) => {
-					//console.error("Error fetching medication reminders:", error);
-				}
-			);
+		if (!currentUser) return;
 
-			return () => unsubscribe();
-		}
+		const medsRef = collection(db, "medications");
+		const q = query(
+			medsRef,
+			where("userId", "==", currentUser.uid),
+			orderBy("start", "asc"),
+		);
+
+		const unsubscribe = onSnapshot(q, (querySnapshot) => {
+			const fetchedEvents = querySnapshot.docs.map((docSnap) => {
+				const data = docSnap.data();
+
+				return {
+					id: docSnap.id,
+					title: data.title || data.name || "Medication",
+					dosage: data.dosage || data.dose || "",
+					frequency: data.frequency || "",
+					dayOfWeek: data.dayOfWeek || "",
+					start: toDateSafe(data.start),
+					end: toDateSafe(data.end),
+				};
+			});
+
+			// Only keep valid events (React-Big-Calendar requires real Dates)
+			setEvents(fetchedEvents.filter((e) => e.start && e.end));
+		});
+
+		return () => unsubscribe();
 	}, [currentUser, db]);
 
+	// -----------------------------
+	// REMINDER GENERATION
+	// -----------------------------
 	const calculateNextReminders = (start, frequency, end) => {
-		let reminders = [];
+		const reminders = [];
 		let currentDate = new Date(start);
 		const endDate = new Date(end);
 
@@ -68,17 +90,21 @@ const MedicationPage = () => {
 			if (frequency === "daily") {
 				reminders.push(new Date(currentDate));
 			} else if (["weekly", "fortnightly"].includes(frequency)) {
-				const dayIncrement = frequency === "fortnightly" ? 14 : 7;
+				const increment = frequency === "fortnightly" ? 14 : 7;
+
 				selectedDays.forEach((day) => {
-					let currentDay = new Date(currentDate);
-					currentDay.setDate(
-						currentDay.getDate() + ((day - currentDay.getDay() + 7) % 7)
+					const dayNum = parseInt(day, 10);
+					let nextDate = new Date(currentDate);
+					nextDate.setDate(
+						nextDate.getDate() + ((dayNum - nextDate.getDay() + 7) % 7),
 					);
-					while (currentDay <= endDate) {
-						reminders.push(new Date(currentDay));
-						currentDay.setDate(currentDay.getDate() + dayIncrement);
+
+					while (nextDate <= endDate) {
+						reminders.push(new Date(nextDate));
+						nextDate.setDate(nextDate.getDate() + increment);
 					}
 				});
+
 				break;
 			} else if (frequency === "monthly") {
 				while (currentDate <= endDate) {
@@ -87,12 +113,13 @@ const MedicationPage = () => {
 				}
 				break;
 			}
+
 			currentDate.setDate(currentDate.getDate() + 1);
 		}
 
 		return reminders.map((date) => ({
-			start: date,
-			end: new Date(date.getTime() + 3600000),
+			start: Timestamp.fromDate(date),
+			end: Timestamp.fromDate(new Date(date.getTime() + 3600000)),
 			title: medicationName,
 			dosage: dosageNumber,
 			frequency: frequencyNumber,
@@ -100,28 +127,33 @@ const MedicationPage = () => {
 		}));
 	};
 
+	// -----------------------------
+	// SUBMIT HANDLER
+	// -----------------------------
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+
 		const newReminders = calculateNextReminders(
 			startTime,
 			frequencyNumber,
-			endTime
+			endTime,
 		);
 
 		try {
 			await Promise.all(
 				newReminders.map((reminder) =>
-					addDoc(
-						collection(db, `Users/${currentUser.uid}/medications`),
-						reminder
-					)
-				)
+					addDoc(collection(db, "medications"), {
+						userId: currentUser.uid,
+						...reminder,
+					}),
+				),
 			);
+
 			setShowSuccessModal(true);
 			setTimeout(() => setShowSuccessModal(false), 3000);
 			resetForm();
 		} catch (error) {
-			//console.error("Error adding medication reminder:", error);
+			console.error("Error adding medication reminder:", error);
 		}
 	};
 
@@ -197,7 +229,7 @@ const MedicationPage = () => {
 							value={selectedDays}
 							onChange={(e) =>
 								setSelectedDays(
-									[...e.target.selectedOptions].map((option) => option.value)
+									[...e.target.selectedOptions].map((option) => option.value),
 								)
 							}
 							required
@@ -237,7 +269,9 @@ const MedicationPage = () => {
 					Add Reminder
 				</Button>
 			</Form>
+
 			<MedicationReminder events={events} />
+
 			<Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)}>
 				<Modal.Header closeButton>
 					<Modal.Title>Success</Modal.Title>
