@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Form, Button, Modal } from "react-bootstrap";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faCapsules,
@@ -9,7 +10,7 @@ import {
 	faCalendarDay,
 	faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import MedicationReminder from "./MedicationReminder";
+
 import {
 	getFirestore,
 	collection,
@@ -20,8 +21,11 @@ import {
 	onSnapshot,
 	Timestamp,
 } from "firebase/firestore";
-import { useAuth } from "../context/AuthContext";
 
+import { useAuth } from "../context/AuthContext";
+import MedicationReminder from "./MedicationReminder";
+
+// Convert Firestore timestamps safely
 const toDateSafe = (ts) => {
 	if (!ts) return null;
 	if (ts.toDate) return ts.toDate();
@@ -44,7 +48,7 @@ const MedicationPage = () => {
 	const [showSuccessModal, setShowSuccessModal] = useState(false);
 
 	// -----------------------------
-	// LISTENER (Firestore)
+	// Firestore Listener
 	// -----------------------------
 	useEffect(() => {
 		if (!currentUser) return;
@@ -56,30 +60,34 @@ const MedicationPage = () => {
 			orderBy("start", "asc"),
 		);
 
-		const unsubscribe = onSnapshot(q, (querySnapshot) => {
-			const fetchedEvents = querySnapshot.docs.map((docSnap) => {
-				const data = docSnap.data();
+		const unsubscribe = onSnapshot(q, (snapshot) => {
+			const mapped = snapshot.docs
+				.map((docSnap) => {
+					const data = docSnap.data();
 
-				return {
-					id: docSnap.id,
-					title: data.title || data.name || "Medication",
-					dosage: data.dosage || data.dose || "",
-					frequency: data.frequency || "",
-					dayOfWeek: data.dayOfWeek || "",
-					start: toDateSafe(data.start),
-					end: toDateSafe(data.end),
-				};
-			});
+					return {
+						id: docSnap.id,
+						title: data.title || data.name || "Medication",
+						dosage: data.dosage || data.dose || "",
+						frequency: data.frequency || "",
+						dayOfWeek: data.dayOfWeek || "",
+						start: toDateSafe(data.start),
+						end: toDateSafe(data.end),
+						taken: data.taken ?? null,
+						skipped: data.skipped ?? false,
+						takenAt: toDateSafe(data.takenAt),
+					};
+				})
+				.filter((e) => e.start && e.end);
 
-			// Only keep valid events (React-Big-Calendar requires real Dates)
-			setEvents(fetchedEvents.filter((e) => e.start && e.end));
+			setEvents(mapped);
 		});
 
 		return () => unsubscribe();
 	}, [currentUser, db]);
 
 	// -----------------------------
-	// REMINDER GENERATION
+	// Reminder Generation
 	// -----------------------------
 	const calculateNextReminders = (start, frequency, end) => {
 		const reminders = [];
@@ -124,40 +132,36 @@ const MedicationPage = () => {
 			dosage: dosageNumber,
 			frequency: frequencyNumber,
 			dayOfWeek: date.toLocaleString("default", { weekday: "long" }),
+			taken: null,
+			skipped: false,
+			takenAt: null,
 		}));
 	};
 
 	// -----------------------------
-	// SUBMIT HANDLER
+	// Submit Handler
 	// -----------------------------
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		const newReminders = calculateNextReminders(
+		const reminders = calculateNextReminders(
 			startTime,
 			frequencyNumber,
 			endTime,
 		);
 
-		try {
-			await Promise.all(
-				newReminders.map((reminder) =>
-					addDoc(collection(db, "medications"), {
-						userId: currentUser.uid,
-						...reminder,
-					}),
-				),
-			);
+		await Promise.all(
+			reminders.map((reminder) =>
+				addDoc(collection(db, "medications"), {
+					userId: currentUser.uid,
+					...reminder,
+				}),
+			),
+		);
 
-			setShowSuccessModal(true);
-			setTimeout(() => setShowSuccessModal(false), 3000);
-			resetForm();
-		} catch (error) {
-			console.error("Error adding medication reminder:", error);
-		}
-	};
+		setShowSuccessModal(true);
+		setTimeout(() => setShowSuccessModal(false), 3000);
 
-	const resetForm = () => {
 		setMedicationName("");
 		setDosage("");
 		setFrequency("");
@@ -172,7 +176,9 @@ const MedicationPage = () => {
 				<FontAwesomeIcon icon={faCapsules} className="me-2" />
 				Medication Reminder
 			</h1>
+
 			<Form onSubmit={handleSubmit}>
+				{/* Medication Name */}
 				<Form.Group className="mb-3">
 					<Form.Label>
 						<FontAwesomeIcon icon={faPills} className="me-2" />
@@ -182,10 +188,11 @@ const MedicationPage = () => {
 						type="text"
 						value={medicationName}
 						onChange={(e) => setMedicationName(e.target.value)}
-						placeholder="Enter Medication Name"
 						required
 					/>
 				</Form.Group>
+
+				{/* Dosage */}
 				<Form.Group className="mb-3">
 					<Form.Label>
 						<FontAwesomeIcon icon={faSyringe} className="me-2" />
@@ -195,10 +202,11 @@ const MedicationPage = () => {
 						type="text"
 						value={dosageNumber}
 						onChange={(e) => setDosage(e.target.value)}
-						placeholder="Enter Dosage"
 						required
 					/>
 				</Form.Group>
+
+				{/* Frequency */}
 				<Form.Group className="mb-3">
 					<Form.Label>
 						<FontAwesomeIcon icon={faCalendarPlus} className="me-2" />
@@ -217,6 +225,8 @@ const MedicationPage = () => {
 						<option value="monthly">Once a Month</option>
 					</Form.Control>
 				</Form.Group>
+
+				{/* Days of Week */}
 				{["weekly", "fortnightly"].includes(frequencyNumber) && (
 					<Form.Group className="mb-3">
 						<Form.Label>
@@ -229,7 +239,7 @@ const MedicationPage = () => {
 							value={selectedDays}
 							onChange={(e) =>
 								setSelectedDays(
-									[...e.target.selectedOptions].map((option) => option.value),
+									[...e.target.selectedOptions].map((opt) => opt.value),
 								)
 							}
 							required
@@ -244,6 +254,8 @@ const MedicationPage = () => {
 						</Form.Control>
 					</Form.Group>
 				)}
+
+				{/* Start Time */}
 				<Form.Group className="mb-3">
 					<Form.Label>Start Time</Form.Label>
 					<Form.Control
@@ -251,9 +263,10 @@ const MedicationPage = () => {
 						value={startTime}
 						onChange={(e) => setStartTime(e.target.value)}
 						required
-						min={today}
 					/>
 				</Form.Group>
+
+				{/* End Time */}
 				<Form.Group className="mb-3">
 					<Form.Label>End Time</Form.Label>
 					<Form.Control
@@ -261,9 +274,9 @@ const MedicationPage = () => {
 						value={endTime}
 						onChange={(e) => setEndTime(e.target.value)}
 						required
-						min={startTime || today}
 					/>
 				</Form.Group>
+
 				<Button variant="primary" type="submit">
 					<FontAwesomeIcon icon={faPlus} className="me-2" />
 					Add Reminder
@@ -277,14 +290,6 @@ const MedicationPage = () => {
 					<Modal.Title>Success</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>Reminder added successfully!</Modal.Body>
-				<Modal.Footer>
-					<Button
-						variant="secondary"
-						onClick={() => setShowSuccessModal(false)}
-					>
-						Close
-					</Button>
-				</Modal.Footer>
 			</Modal>
 		</Container>
 	);
