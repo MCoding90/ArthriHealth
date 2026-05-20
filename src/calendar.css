@@ -1,0 +1,122 @@
+/* ------------------------------------------
+   GENERAL CALENDAR IMPROVEMENTS
+------------------------------------------- */
+
+.rbc-calendar {
+	font-family: "Inter", system-ui, sans-serif;
+	font-size: 14px;
+}
+
+/* Increase spacing between rows */
+.rbc-month-row {
+	min-height: 160px !important;
+}
+
+/* Remove default event background */
+.rbc-event {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+}
+
+/* Improve date number visibility */
+.rbc-date-cell {
+	padding: 4px 6px;
+	font-weight: 600;
+}
+
+/* Today highlight */
+.rbc-today {
+	background: rgba(0, 123, 255, 0.08) !important;
+}
+
+/* ------------------------------------------
+   EVENT HOVER EFFECT
+------------------------------------------- */
+
+.rbc-event:hover {
+	filter: brightness(1.15);
+	cursor: pointer;
+}
+
+/* ------------------------------------------
+   TOOLBAR STYLING
+------------------------------------------- */
+
+.rbc-toolbar {
+	margin-bottom: 12px;
+}
+
+.rbc-toolbar button {
+	border-radius: 6px !important;
+	padding: 6px 12px !important;
+	font-size: 14px !important;
+}
+
+.rbc-toolbar button:hover {
+	background: #e9ecef !important;
+}
+
+/* Active view button */
+.rbc-toolbar .rbc-active {
+	background: #0d6efd !important;
+	color: white !important;
+}
+
+/* ------------------------------------------
+   MONTH VIEW CLEANUP
+------------------------------------------- */
+
+.rbc-month-view {
+	border-radius: 8px;
+	overflow: hidden;
+	border: 1px solid #dee2e6;
+}
+
+.rbc-header {
+	padding: 8px 0;
+	background: #f8f9fa;
+	font-weight: 600;
+	border-bottom: 1px solid #dee2e6;
+}
+
+/* ------------------------------------------
+   EVENT CONTAINER SPACING
+------------------------------------------- */
+
+.rbc-day-slot .rbc-events-container {
+	margin: 0 2px;
+}
+
+.rbc-day-slot .rbc-event {
+	margin-bottom: 2px;
+}
+
+/* ------------------------------------------
+   AGENDA VIEW IMPROVEMENTS
+------------------------------------------- */
+
+.rbc-agenda-view table.rbc-agenda-table {
+	font-size: 14px;
+}
+
+.rbc-agenda-view table tr > td {
+	padding: 8px 12px;
+}
+
+/* ------------------------------------------
+   SCROLLBAR CLEANUP (for week/day views)
+------------------------------------------- */
+
+.rbc-time-content::-webkit-scrollbar {
+	width: 8px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb {
+	background: #ced4da;
+	border-radius: 4px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb:hover {
+	background: #adb5bd;
+}
