@@ -1,109 +1,135 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import {
+	addDoc,
+	collection,
+	deleteDoc,
+	doc,
+	onSnapshot,
+	query,
+	updateDoc,
+} from "firebase/firestore";
 import SymptomTracker from "./pages/SymptomTracker";
-import SymptomsChart from "./components/SymptomsChart";
 
-jest.mock("./components/SymptomsChart", () => ({
-	__esModule: true,
-	default: ({ symptoms }) => (
-		<div>Mocked Chart with {symptoms.length} entries</div>
-	),
+jest.mock("./firebase", () => ({ db: {} }));
+jest.mock("./context/AuthContext", () => ({
+	useAuth: () => ({ currentUser: { uid: "user-1", emailVerified: true } }),
+}));
+jest.mock("./components/SymptomsChart", () => ({ symptoms }) => (
+	<div>Chart with {symptoms.length} entries</div>
+));
+jest.mock("firebase/firestore", () => ({
+	collection: jest.fn(),
+	doc: jest.fn(),
+	query: jest.fn(),
+	orderBy: jest.fn(),
+	addDoc: jest.fn(),
+	updateDoc: jest.fn(),
+	deleteDoc: jest.fn(),
+	onSnapshot: jest.fn(),
 }));
 
-describe("SymptomTracker Component", () => {
-	it("renders correctly", () => {
-		render(<SymptomTracker />);
-		expect(screen.getByText("Symptom Tracker")).toBeInTheDocument();
-		expect(screen.getByLabelText("Symptom input")).toBeInTheDocument();
-		expect(screen.getByLabelText("Date input")).toBeInTheDocument();
-		expect(screen.getByLabelText("Severity input")).toBeInTheDocument();
-		expect(screen.getByLabelText("Notes input")).toBeInTheDocument();
-		expect(screen.getByLabelText("Submit symptom")).toBeInTheDocument();
-		expect(screen.getByLabelText("Search symptoms")).toBeInTheDocument();
+const emit = (records) => {
+	const onNext = onSnapshot.mock.calls.at(-1)[1];
+	act(() => {
+		onNext({ docs: records.map(({ id, ...data }) => ({ id, data: () => data })) });
 	});
+};
+
+// CRA resets mock implementations before each test, so (re)define them here.
+beforeEach(() => {
+	collection.mockReturnValue("symptoms-ref");
+	doc.mockImplementation((...path) => path.slice(1).join("/"));
+	query.mockImplementation((ref) => ref);
+	addDoc.mockResolvedValue();
+	updateDoc.mockResolvedValue();
+	deleteDoc.mockResolvedValue();
+	onSnapshot.mockReturnValue(() => {});
+	window.confirm = jest.fn(() => true);
 });
 
-it("handles input changes correctly", () => {
+it("validates required fields", async () => {
 	render(<SymptomTracker />);
-	const symptomInput = screen.getByLabelText("Symptom input");
-	userEvent.type(symptomInput, "Headache");
-	expect(symptomInput.value).toBe("Headache");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
+	expect(await screen.findByText("Please enter a symptom and a date.")).toBeInTheDocument();
+	expect(addDoc).not.toHaveBeenCalled();
 });
 
-it("displays an error when required fields are missing upon submission", async () => {
+it("rejects out-of-range severity", async () => {
 	render(<SymptomTracker />);
-	userEvent.click(screen.getByText("Add Symptom"));
-	const alertMessage = await screen.findByText("Please fill in all fields.");
-	expect(alertMessage).toBeInTheDocument();
-});
-
-it("submits form with valid input and clears inputs afterwards", async () => {
-	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Symptom input"), "Headache");
-	userEvent.type(screen.getByLabelText("Date input"), "2022-01-01");
-	userEvent.click(screen.getByText("Add Symptom"));
-
-	await waitFor(() => {
-		expect(screen.getByText("Symptom added successfully!")).toBeInTheDocument();
-	});
-	expect(screen.getByLabelText("Symptom input").value).toBe("");
-});
-
-it("filters symptoms based on search input", async () => {
-	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Symptom input"), "Headache");
-	userEvent.type(screen.getByLabelText("Date input"), "2022-01-01");
-	userEvent.click(screen.getByText("Add Symptom"));
-	userEvent.type(screen.getByLabelText("Search symptoms"), "Headache");
-
-	// Using findByText with await to handle asynchronous updates
-	const filteredText = await screen.findByText(/Headache - 2022-01-01/);
-	expect(filteredText).toBeInTheDocument();
-});
-
-it("deletes a symptom from the list", async () => {
-	render(<SymptomTracker />);
-	// Add a symptom and delete it
-	userEvent.type(screen.getByLabelText("Symptom input"), "Headache");
-	userEvent.type(screen.getByLabelText("Date input"), "2022-01-01");
-	userEvent.click(screen.getByText("Add Symptom"));
-
-	await waitFor(() => {
-		userEvent.click(
-			screen.getByLabelText("Delete symptom recorded on 2022-01-01")
-		);
-	});
-
-	expect(screen.queryByText("Headache - 2022-01-01")).not.toBeInTheDocument();
-});
-
-it("clears success message after 3 seconds", async () => {
-	jest.useFakeTimers();
-	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Symptom input"), "Headache");
-	userEvent.type(screen.getByLabelText("Date input"), "2022-01-01");
-	userEvent.click(screen.getByText("Add Symptom"));
-
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.type(screen.getByLabelText("Severity input"), "11");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
 	expect(
-		await screen.findByText("Symptom added successfully!")
+		await screen.findByText("Severity must be a whole number from 1 to 10.")
 	).toBeInTheDocument();
-	jest.advanceTimersByTime(3000);
-
-	await waitFor(() => {
-		expect(
-			screen.queryByText("Symptom added successfully!")
-		).not.toBeInTheDocument();
-	});
-
-	jest.useRealTimers();
 });
 
-it("renders mocked SymptomsChart", () => {
-	render(
-		<SymptomsChart
-			symptoms={[{ symptom: "Headache", date: "2022-01-01", severity: "5" }]}
-		/>
+it("adds a symptom with a numeric severity and clears the form", async () => {
+	render(<SymptomTracker />);
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.type(screen.getByLabelText("Severity input"), "6");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
+
+	expect(await screen.findByText("Symptom added successfully!")).toBeInTheDocument();
+	expect(addDoc).toHaveBeenCalledWith("symptoms-ref", {
+		symptom: "Stiffness",
+		date: "2025-01-01",
+		severity: 6,
+		notes: "",
+		user: "user-1",
+	});
+	expect(screen.getByLabelText("Symptom input")).toHaveValue("");
+});
+
+it("shows an error when saving fails", async () => {
+	addDoc.mockRejectedValueOnce(new Error("permission-denied"));
+	render(<SymptomTracker />);
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
+	expect(
+		await screen.findByText("Could not save the symptom. Please try again.")
+	).toBeInTheDocument();
+});
+
+it("updates only editable fields when editing", async () => {
+	render(<SymptomTracker />);
+	emit([{ id: "s1", symptom: "Pain", date: "2025-01-02", severity: 4, notes: "", user: "user-1" }]);
+
+	userEvent.click(screen.getByLabelText("Edit symptom recorded on 2025-01-02"));
+	userEvent.clear(screen.getByLabelText("Severity input"));
+	userEvent.type(screen.getByLabelText("Severity input"), "7");
+	userEvent.click(screen.getByText("Update Symptom"));
+
+	await waitFor(() =>
+		expect(updateDoc).toHaveBeenCalledWith("Users/user-1/symptoms/s1", {
+			symptom: "Pain",
+			date: "2025-01-02",
+			severity: 7,
+			notes: "",
+		})
 	);
-	expect(screen.getByText(/Mocked Chart with 1 entries/)).toBeInTheDocument();
+});
+
+it("filters the list while keeping edit/delete actions", async () => {
+	render(<SymptomTracker />);
+	emit([
+		{ id: "s1", symptom: "Pain", date: "2025-01-02", severity: 4 },
+		{ id: "s2", symptom: "Swelling", date: "2025-01-03", severity: 2 },
+	]);
+	userEvent.type(screen.getByLabelText("Search symptoms"), "swell");
+	await waitFor(() => expect(screen.queryByText(/Pain - 2025-01-02/)).not.toBeInTheDocument());
+	expect(screen.getByText(/Swelling - 2025-01-03/)).toBeInTheDocument();
+	expect(screen.getByLabelText("Delete symptom recorded on 2025-01-03")).toBeInTheDocument();
+});
+
+it("deletes after confirmation", async () => {
+	render(<SymptomTracker />);
+	emit([{ id: "s1", symptom: "Pain", date: "2025-01-02", severity: 4 }]);
+	userEvent.click(screen.getByLabelText("Delete symptom recorded on 2025-01-02"));
+	await waitFor(() => expect(deleteDoc).toHaveBeenCalledWith("Users/user-1/symptoms/s1"));
 });

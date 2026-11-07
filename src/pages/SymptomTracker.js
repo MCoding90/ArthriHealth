@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useDeferredValue } from "react";
 import { Form, Card, Button, Alert, ListGroup } from "react-bootstrap";
-import { debounce } from "lodash";
 import SymptomsChart from "../components/SymptomsChart";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,133 +12,146 @@ import {
 	faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-	getFirestore,
 	doc,
 	collection,
 	addDoc,
 	query,
-	where,
+	orderBy,
 	updateDoc,
 	deleteDoc,
 	onSnapshot,
 } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+
+const EMPTY_FORM = { symptom: "", date: "", severity: "", notes: "" };
 
 const SymptomTracker = () => {
 	const { currentUser } = useAuth();
-	const db = getFirestore();
 	const [symptoms, setSymptoms] = useState([]);
-	const [formInput, setFormInput] = useState({
-		symptom: "",
-		date: "",
-		severity: "",
-		notes: "",
-	});
-	const [editing, setEditing] = useState(false);
-	const [currentId, setCurrentId] = useState(null);
-	const [showAlert, setShowAlert] = useState(false);
+	const [formInput, setFormInput] = useState(EMPTY_FORM);
+	const [currentId, setCurrentId] = useState(null); // non-null while editing
+	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
+	const [submitting, setSubmitting] = useState(false);
 	const [searchInput, setSearchInput] = useState("");
-	const [suggestions, setSuggestions] = useState([]);
+	const deferredSearch = useDeferredValue(searchInput);
+	const editing = currentId !== null;
 
 	useEffect(() => {
-		if (currentUser) {
-			const symptomsRef = collection(db, "Users", currentUser.uid, "symptoms");
-			const q = query(symptomsRef, where("user", "==", currentUser.uid));
-			const unsubscribe = onSnapshot(q, (querySnapshot) => {
-				const symptomsData = querySnapshot.docs.map((doc) => ({
-					id: doc.id,
-					...doc.data(),
-				}));
-				setSymptoms(symptomsData);
-			});
-
-			return () => unsubscribe();
-		}
-	}, [currentUser, db]);
+		const symptomsRef = collection(db, "Users", currentUser.uid, "symptoms");
+		const q = query(symptomsRef, orderBy("date", "asc"));
+		return onSnapshot(
+			q,
+			(snapshot) => {
+				setSymptoms(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+			},
+			() => setErrorMessage("Could not load your symptoms. Please refresh the page.")
+		);
+	}, [currentUser.uid]);
 
 	useEffect(() => {
-		const handleSearch = debounce(() => {
-			if (searchInput.trim()) {
-				const filteredSuggestions = symptoms.filter((symptom) =>
-					symptom.symptom.toLowerCase().includes(searchInput.toLowerCase())
-				);
-				setSuggestions(filteredSuggestions);
-			} else {
-				setSuggestions([]);
-			}
-		}, 300);
-		handleSearch();
-		return () => handleSearch.cancel();
-	}, [searchInput, symptoms]);
+		if (!successMessage) return;
+		const timer = setTimeout(() => setSuccessMessage(""), 3000);
+		return () => clearTimeout(timer);
+	}, [successMessage]);
+
+	const filteredSymptoms = useMemo(() => {
+		const term = deferredSearch.trim().toLowerCase();
+		if (!term) return symptoms;
+		return symptoms.filter((s) => (s.symptom || "").toLowerCase().includes(term));
+	}, [symptoms, deferredSearch]);
 
 	const handleInputChange = (event) => {
 		const { name, value } = event.target;
-		setFormInput((prevState) => ({
-			...prevState,
-			[name]: value,
-		}));
+		setFormInput((prev) => ({ ...prev, [name]: value }));
+	};
+
+	const resetForm = () => {
+		setFormInput(EMPTY_FORM);
+		setCurrentId(null);
 	};
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
-		if (!formInput.symptom || !formInput.date) {
-			setShowAlert(true);
+		const symptom = formInput.symptom.trim();
+		if (!symptom || !formInput.date) {
+			setErrorMessage("Please enter a symptom and a date.");
+			return;
+		}
+		const severity = formInput.severity === "" ? null : Number(formInput.severity);
+		if (severity !== null && !(Number.isInteger(severity) && severity >= 1 && severity <= 10)) {
+			setErrorMessage("Severity must be a whole number from 1 to 10.");
 			return;
 		}
 
-		if (editing) {
-			const symptomRef = doc(
-				db,
-				"Users",
-				currentUser.uid,
-				"symptoms",
-				currentId
-			);
-			await updateDoc(symptomRef, formInput);
-			setSuccessMessage("Symptom updated successfully!");
-			setEditing(false);
-			setCurrentId(null);
-		} else {
-			const newSymptom = {
-				...formInput,
-				user: currentUser.uid,
-			};
-			await addDoc(
-				collection(db, "Users", currentUser.uid, "symptoms"),
-				newSymptom
-			);
-			setSuccessMessage("Symptom added successfully!");
+		// Only persist known fields (never id/user from the edited record).
+		const payload = {
+			symptom,
+			date: formInput.date,
+			severity,
+			notes: formInput.notes.trim(),
+		};
+
+		setSubmitting(true);
+		setErrorMessage("");
+		try {
+			if (editing) {
+				await updateDoc(doc(db, "Users", currentUser.uid, "symptoms", currentId), payload);
+				setSuccessMessage("Symptom updated successfully!");
+			} else {
+				await addDoc(collection(db, "Users", currentUser.uid, "symptoms"), {
+					...payload,
+					user: currentUser.uid,
+				});
+				setSuccessMessage("Symptom added successfully!");
+			}
+			resetForm();
+			setSearchInput("");
+		} catch {
+			setErrorMessage("Could not save the symptom. Please try again.");
+		} finally {
+			setSubmitting(false);
 		}
-
-		setFormInput({ symptom: "", date: "", severity: "", notes: "" });
-		setShowAlert(false);
-		setTimeout(() => setSuccessMessage(""), 3000);
-		setSearchInput("");
 	};
 
-	const handleEdit = (symptom) => {
-		setFormInput(symptom);
-		setEditing(true);
-		setCurrentId(symptom.id);
+	const handleEdit = (record) => {
+		setFormInput({
+			symptom: record.symptom || "",
+			date: record.date || "",
+			severity: record.severity ?? "",
+			notes: record.notes || "",
+		});
+		setCurrentId(record.id);
+		setErrorMessage("");
 	};
 
-	const handleDelete = async (id) => {
-		await deleteDoc(doc(db, "Users", currentUser.uid, "symptoms", id));
+	const handleDelete = async (record) => {
+		if (!window.confirm(`Delete "${record.symptom}" on ${record.date}?`)) return;
+		try {
+			await deleteDoc(doc(db, "Users", currentUser.uid, "symptoms", record.id));
+			if (record.id === currentId) resetForm();
+		} catch {
+			setErrorMessage("Could not delete the symptom. Please try again.");
+		}
 	};
 
 	return (
-		<div>
+		<div className="my-4">
 			<h2>
 				<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
 				Symptom Tracker
 			</h2>
-			{showAlert && <Alert variant="danger">Please fill in all fields.</Alert>}
+			{errorMessage && (
+				<Alert variant="danger" dismissible onClose={() => setErrorMessage("")}>
+					{errorMessage}
+				</Alert>
+			)}
 			{successMessage && <Alert variant="success">{successMessage}</Alert>}
-			<Card>
+			<Card className="mb-4">
 				<Card.Body>
-					<Form onSubmit={handleSubmit}>
-						<Form.Group controlId="symptomInput">
+					<Form onSubmit={handleSubmit} noValidate>
+						<Form.Group controlId="symptomInput" className="mb-3">
 							<Form.Label>
 								<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
 								Enter Symptom:
@@ -150,10 +162,11 @@ const SymptomTracker = () => {
 								placeholder="Enter symptom"
 								value={formInput.symptom}
 								onChange={handleInputChange}
+								maxLength={100}
 								aria-label="Symptom input"
 							/>
 						</Form.Group>
-						<Form.Group controlId="dateInput">
+						<Form.Group controlId="dateInput" className="mb-3">
 							<Form.Label>
 								<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
 								Enter Date:
@@ -166,7 +179,7 @@ const SymptomTracker = () => {
 								aria-label="Date input"
 							/>
 						</Form.Group>
-						<Form.Group controlId="severityInput">
+						<Form.Group controlId="severityInput" className="mb-3">
 							<Form.Label>
 								<FontAwesomeIcon icon={faTachometerAlt} className="me-2" />
 								Severity (1-10):
@@ -179,10 +192,11 @@ const SymptomTracker = () => {
 								onChange={handleInputChange}
 								min="1"
 								max="10"
+								step="1"
 								aria-label="Severity input"
 							/>
 						</Form.Group>
-						<Form.Group controlId="notesInput">
+						<Form.Group controlId="notesInput" className="mb-3">
 							<Form.Label>
 								<FontAwesomeIcon icon={faNotesMedical} className="me-2" />
 								Notes:
@@ -194,71 +208,80 @@ const SymptomTracker = () => {
 								value={formInput.notes}
 								onChange={handleInputChange}
 								rows={3}
+								maxLength={1000}
 								aria-label="Notes input"
 							/>
 						</Form.Group>
-						<Button variant="primary" type="submit" aria-label="Submit symptom">
+						<Button
+							variant="primary"
+							type="submit"
+							disabled={submitting}
+							aria-label="Submit symptom"
+						>
 							<FontAwesomeIcon icon={faPlusCircle} className="me-2" />
 							{editing ? "Update Symptom" : "Add Symptom"}
 						</Button>
+						{editing && (
+							<Button variant="link" onClick={resetForm} className="ms-2">
+								Cancel
+							</Button>
+						)}
 					</Form>
-					<Form.Group controlId="searchInput">
-						<Form.Label>
-							<FontAwesomeIcon icon={faSearch} className="me-2" />
-							Search Symptoms:
-						</Form.Label>
-						<Form.Control
-							type="text"
-							placeholder="Search symptoms"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							aria-label="Search symptoms"
-						/>
-					</Form.Group>
 				</Card.Body>
 			</Card>
 			{symptoms.length > 0 && <SymptomsChart symptoms={symptoms} />}
-			<ListGroup>
-				{suggestions.length > 0 ? (
-					suggestions.map((suggestion) => (
-						<ListGroup.Item
-							key={suggestion.id}
-							onClick={() => setSearchInput(suggestion.symptom)}
-							aria-label={`Select suggestion: ${suggestion.symptom} recorded on ${suggestion.date}`}
-						>
-							{suggestion.symptom} - {suggestion.date}
-						</ListGroup.Item>
-					))
-				) : symptoms.length > 0 ? (
-					symptoms.map((record) => (
+			<Form.Group controlId="searchInput" className="my-3">
+				<Form.Label>
+					<FontAwesomeIcon icon={faSearch} className="me-2" />
+					Search Symptoms:
+				</Form.Label>
+				<Form.Control
+					type="search"
+					placeholder="Search symptoms"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					aria-label="Search symptoms"
+				/>
+			</Form.Group>
+			{filteredSymptoms.length > 0 ? (
+				<ListGroup>
+					{filteredSymptoms.map((record) => (
 						<ListGroup.Item
 							key={record.id}
-							aria-label={`Symptom: ${record.symptom}, Date: ${record.date}, Severity: ${record.severity}, Notes: ${record.notes}`}
+							className="d-flex justify-content-between align-items-start gap-2"
 						>
-							{record.symptom} - {record.date} - Severity: {record.severity}
-							{record.notes && ` - Notes: ${record.notes}`}
-							<Button
-								variant="danger"
-								onClick={() => handleDelete(record.id)}
-								style={{ float: "right" }}
-								aria-label={`Delete symptom recorded on ${record.date}`}
-							>
-								<FontAwesomeIcon icon={faTrash} />
-							</Button>
-							<Button
-								variant="secondary"
-								onClick={() => handleEdit(record)}
-								style={{ float: "right", marginRight: "10px" }}
-								aria-label={`Edit symptom recorded on ${record.date}`}
-							>
-								<FontAwesomeIcon icon={faEdit} />
-							</Button>
+							<div>
+								{record.symptom} - {record.date}
+								{record.severity != null && record.severity !== "" &&
+									` - Severity: ${record.severity}`}
+								{record.notes && ` - Notes: ${record.notes}`}
+							</div>
+							<div className="d-flex gap-2 flex-shrink-0">
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={() => handleEdit(record)}
+									aria-label={`Edit symptom recorded on ${record.date}`}
+								>
+									<FontAwesomeIcon icon={faEdit} />
+								</Button>
+								<Button
+									variant="danger"
+									size="sm"
+									onClick={() => handleDelete(record)}
+									aria-label={`Delete symptom recorded on ${record.date}`}
+								>
+									<FontAwesomeIcon icon={faTrash} />
+								</Button>
+							</div>
 						</ListGroup.Item>
-					))
-				) : (
-					<Alert variant="info">No symptoms logged.</Alert>
-				)}
-			</ListGroup>
+					))}
+				</ListGroup>
+			) : (
+				<Alert variant="info">
+					{symptoms.length ? "No symptoms match your search." : "No symptoms logged."}
+				</Alert>
+			)}
 		</div>
 	);
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Form, Button, Modal } from "react-bootstrap";
+import { Container, Form, Button, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faCapsules,
@@ -11,137 +11,145 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import MedicationReminder from "./MedicationReminder";
 import {
-	getFirestore,
 	collection,
-	addDoc,
+	doc,
 	query,
 	orderBy,
 	onSnapshot,
+	writeBatch,
+	deleteDoc,
 } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import {
+	MAX_REMINDERS,
+	buildReminders,
+	getReminderDates,
+	toLocalDateTimeInput,
+} from "../utils/reminders";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const MedicationPage = () => {
-	const { currentUser } = useAuth(); // Use the currentUser from AuthContext
-	const db = getFirestore();
-
-	const today = new Date().toISOString().slice(0, 16);
+	const { currentUser } = useAuth();
+	const [now] = useState(() => toLocalDateTimeInput());
 
 	const [medicationName, setMedicationName] = useState("");
-	const [dosageNumber, setDosage] = useState("");
-	const [frequencyNumber, setFrequency] = useState("");
+	const [dosage, setDosage] = useState("");
+	const [frequency, setFrequency] = useState("");
 	const [selectedDays, setSelectedDays] = useState([]);
-	const [startTime, setStartTime] = useState(today);
+	const [startTime, setStartTime] = useState(now);
 	const [endTime, setEndTime] = useState("");
 	const [events, setEvents] = useState([]);
-	const [showSuccessModal, setShowSuccessModal] = useState(false);
+	const [status, setStatus] = useState(null); // { variant, message }
+	const [saving, setSaving] = useState(false);
+
+	const isWeekly = frequency === "weekly" || frequency === "fortnightly";
 
 	useEffect(() => {
-		if (currentUser) {
-			const medsRef = collection(db, `Users/${currentUser.uid}/medications`);
-			const q = query(medsRef, orderBy("start", "asc"));
-			const unsubscribe = onSnapshot(
-				q,
-				(querySnapshot) => {
-					const fetchedEvents = querySnapshot.docs.map((doc) => ({
-						id: doc.id,
-						...doc.data(),
-						start: doc.data().start.toDate(), // Convert Timestamp to Date
-						end: doc.data().end.toDate(),
-					}));
-					setEvents(fetchedEvents);
-				},
-				(error) => {
-					//console.error("Error fetching medication reminders:", error);
-				}
-			);
-
-			return () => unsubscribe();
-		}
-	}, [currentUser, db]);
-
-	const calculateNextReminders = (start, frequency, end) => {
-		let reminders = [];
-		let currentDate = new Date(start);
-		const endDate = new Date(end);
-
-		while (currentDate <= endDate) {
-			if (frequency === "daily") {
-				reminders.push(new Date(currentDate));
-			} else if (["weekly", "fortnightly"].includes(frequency)) {
-				const dayIncrement = frequency === "fortnightly" ? 14 : 7;
-				selectedDays.forEach((day) => {
-					let currentDay = new Date(currentDate);
-					currentDay.setDate(
-						currentDay.getDate() + ((day - currentDay.getDay() + 7) % 7)
-					);
-					while (currentDay <= endDate) {
-						reminders.push(new Date(currentDay));
-						currentDay.setDate(currentDay.getDate() + dayIncrement);
-					}
-				});
-				break;
-			} else if (frequency === "monthly") {
-				while (currentDate <= endDate) {
-					reminders.push(new Date(currentDate));
-					currentDate.setMonth(currentDate.getMonth() + 1);
-				}
-				break;
-			}
-			currentDate.setDate(currentDate.getDate() + 1);
-		}
-
-		return reminders.map((date) => ({
-			start: date,
-			end: new Date(date.getTime() + 3600000),
-			title: medicationName,
-			dosage: dosageNumber,
-			frequency: frequencyNumber,
-			dayOfWeek: date.toLocaleString("default", { weekday: "long" }),
-		}));
-	};
-
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		const newReminders = calculateNextReminders(
-			startTime,
-			frequencyNumber,
-			endTime
+		const medsRef = collection(db, "Users", currentUser.uid, "medications");
+		const q = query(medsRef, orderBy("start", "asc"));
+		return onSnapshot(
+			q,
+			(snapshot) => {
+				setEvents(
+					snapshot.docs.map((d) => {
+						const data = d.data();
+						return { ...data, id: d.id, start: data.start.toDate(), end: data.end.toDate() };
+					})
+				);
+			},
+			() =>
+				setStatus({
+					variant: "danger",
+					message: "Could not load your reminders. Please refresh the page.",
+				})
 		);
+	}, [currentUser.uid]);
 
-		try {
-			await Promise.all(
-				newReminders.map((reminder) =>
-					addDoc(
-						collection(db, `Users/${currentUser.uid}/medications`),
-						reminder
-					)
-				)
-			);
-			setShowSuccessModal(true);
-			setTimeout(() => setShowSuccessModal(false), 3000);
-			resetForm();
-		} catch (error) {
-			//console.error("Error adding medication reminder:", error);
-		}
-	};
+	useEffect(() => {
+		if (status?.variant !== "success") return;
+		const timer = setTimeout(() => setStatus(null), 3000);
+		return () => clearTimeout(timer);
+	}, [status]);
 
 	const resetForm = () => {
 		setMedicationName("");
 		setDosage("");
 		setFrequency("");
 		setSelectedDays([]);
-		setStartTime(today);
+		setStartTime(toLocalDateTimeInput());
 		setEndTime("");
 	};
 
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setStatus(null);
+
+		if (isWeekly && selectedDays.length === 0) {
+			setStatus({ variant: "danger", message: "Select at least one day of the week." });
+			return;
+		}
+		const dates = getReminderDates({
+			start: startTime,
+			end: endTime,
+			frequency,
+			daysOfWeek: selectedDays,
+		});
+		if (dates.length === 0) {
+			setStatus({ variant: "danger", message: "No reminders fall within that date range." });
+			return;
+		}
+		if (dates.length > MAX_REMINDERS) {
+			setStatus({
+				variant: "danger",
+				message: `That schedule creates ${dates.length} reminders (max ${MAX_REMINDERS}). Please shorten the date range.`,
+			});
+			return;
+		}
+
+		const reminders = buildReminders({
+			name: medicationName.trim(),
+			dosage: dosage.trim(),
+			frequency,
+			dates,
+		});
+
+		setSaving(true);
+		try {
+			const medsRef = collection(db, "Users", currentUser.uid, "medications");
+			const batch = writeBatch(db);
+			reminders.forEach((reminder) => batch.set(doc(medsRef), reminder));
+			await batch.commit();
+			setStatus({
+				variant: "success",
+				message: `${reminders.length} reminder${reminders.length === 1 ? "" : "s"} added successfully!`,
+			});
+			resetForm();
+		} catch {
+			setStatus({ variant: "danger", message: "Could not save the reminder. Please try again." });
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const handleDelete = async (event) => {
+		await deleteDoc(doc(db, "Users", currentUser.uid, "medications", event.id));
+	};
+
 	return (
-		<Container>
-			<h1 className="mt-3">
+		<Container className="my-4">
+			<h1>
 				<FontAwesomeIcon icon={faCapsules} className="me-2" />
 				Medication Reminder
 			</h1>
-			<Form onSubmit={handleSubmit}>
-				<Form.Group className="mb-3">
+			{status && (
+				<Alert variant={status.variant} dismissible onClose={() => setStatus(null)}>
+					{status.message}
+				</Alert>
+			)}
+			<Form onSubmit={handleSubmit} className="mb-4">
+				<Form.Group className="mb-3" controlId="medicationName">
 					<Form.Label>
 						<FontAwesomeIcon icon={faPills} className="me-2" />
 						Medication Name
@@ -151,30 +159,31 @@ const MedicationPage = () => {
 						value={medicationName}
 						onChange={(e) => setMedicationName(e.target.value)}
 						placeholder="Enter Medication Name"
+						maxLength={100}
 						required
 					/>
 				</Form.Group>
-				<Form.Group className="mb-3">
+				<Form.Group className="mb-3" controlId="dosage">
 					<Form.Label>
 						<FontAwesomeIcon icon={faSyringe} className="me-2" />
 						Dosage
 					</Form.Label>
 					<Form.Control
 						type="text"
-						value={dosageNumber}
+						value={dosage}
 						onChange={(e) => setDosage(e.target.value)}
 						placeholder="Enter Dosage"
+						maxLength={100}
 						required
 					/>
 				</Form.Group>
-				<Form.Group className="mb-3">
+				<Form.Group className="mb-3" controlId="frequency">
 					<Form.Label>
 						<FontAwesomeIcon icon={faCalendarPlus} className="me-2" />
 						Frequency
 					</Form.Label>
-					<Form.Control
-						as="select"
-						value={frequencyNumber}
+					<Form.Select
+						value={frequency}
 						onChange={(e) => setFrequency(e.target.value)}
 						required
 					>
@@ -183,75 +192,57 @@ const MedicationPage = () => {
 						<option value="weekly">Once a Week</option>
 						<option value="fortnightly">Every Two Weeks</option>
 						<option value="monthly">Once a Month</option>
-					</Form.Control>
+					</Form.Select>
 				</Form.Group>
-				{["weekly", "fortnightly"].includes(frequencyNumber) && (
-					<Form.Group className="mb-3">
+				{isWeekly && (
+					<Form.Group className="mb-3" controlId="daysOfWeek">
 						<Form.Label>
 							<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
 							Day(s) of the Week
 						</Form.Label>
-						<Form.Control
-							as="select"
+						<Form.Select
 							multiple
 							value={selectedDays}
 							onChange={(e) =>
-								setSelectedDays(
-									[...e.target.selectedOptions].map((option) => option.value)
-								)
+								setSelectedDays([...e.target.selectedOptions].map((o) => o.value))
 							}
 							required
 						>
-							<option value="0">Sunday</option>
-							<option value="1">Monday</option>
-							<option value="2">Tuesday</option>
-							<option value="3">Wednesday</option>
-							<option value="4">Thursday</option>
-							<option value="5">Friday</option>
-							<option value="6">Saturday</option>
-						</Form.Control>
+							{DAYS.map((day, i) => (
+								<option key={day} value={String(i)}>
+									{day}
+								</option>
+							))}
+						</Form.Select>
+						<Form.Text>Hold Ctrl / Cmd to select several days.</Form.Text>
 					</Form.Group>
 				)}
-				<Form.Group className="mb-3">
+				<Form.Group className="mb-3" controlId="startTime">
 					<Form.Label>Start Time</Form.Label>
 					<Form.Control
 						type="datetime-local"
 						value={startTime}
 						onChange={(e) => setStartTime(e.target.value)}
 						required
-						min={today}
+						min={now}
 					/>
 				</Form.Group>
-				<Form.Group className="mb-3">
+				<Form.Group className="mb-3" controlId="endTime">
 					<Form.Label>End Time</Form.Label>
 					<Form.Control
 						type="datetime-local"
 						value={endTime}
 						onChange={(e) => setEndTime(e.target.value)}
 						required
-						min={startTime || today}
+						min={startTime || now}
 					/>
 				</Form.Group>
-				<Button variant="primary" type="submit">
+				<Button variant="primary" type="submit" disabled={saving}>
 					<FontAwesomeIcon icon={faPlus} className="me-2" />
-					Add Reminder
+					{saving ? "Saving..." : "Add Reminder"}
 				</Button>
 			</Form>
-			<MedicationReminder events={events} />
-			<Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)}>
-				<Modal.Header closeButton>
-					<Modal.Title>Success</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>Reminder added successfully!</Modal.Body>
-				<Modal.Footer>
-					<Button
-						variant="secondary"
-						onClick={() => setShowSuccessModal(false)}
-					>
-						Close
-					</Button>
-				</Modal.Footer>
-			</Modal>
+			<MedicationReminder events={events} onDelete={handleDelete} />
 		</Container>
 	);
 };

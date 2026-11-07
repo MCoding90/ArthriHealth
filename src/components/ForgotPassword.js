@@ -2,10 +2,10 @@ import React from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+import { useAuth } from "../context/AuthContext";
 
 const ForgotPasswordModal = ({ show, onHide, onShowToast }) => {
-	const auth = getAuth();
+	const { resetPassword } = useAuth();
 	const formik = useFormik({
 		initialValues: {
 			email: "",
@@ -13,14 +13,15 @@ const ForgotPasswordModal = ({ show, onHide, onShowToast }) => {
 		validationSchema: Yup.object({
 			email: Yup.string().email("Invalid email address").required("Required"),
 		}),
-		onSubmit: async (values) => {
+		onSubmit: async (values, { resetForm }) => {
 			try {
-				await sendPasswordResetEmail(auth, values.email);
-				onShowToast("Password reset email sent!", "success");
-				onHide(); // Close the modal on successful email submission
-			} catch (error) {
+				await resetPassword(values.email);
+				// Same message whether or not the account exists (avoids account enumeration).
+				onShowToast("If an account exists, a reset link has been sent.", "success");
+				resetForm();
+				onHide();
+			} catch {
 				onShowToast("Failed to send password reset email.", "error");
-				console.error("Password reset error:", error);
 			}
 		},
 	});
@@ -32,20 +33,22 @@ const ForgotPasswordModal = ({ show, onHide, onShowToast }) => {
 			</Modal.Header>
 			<Modal.Body>
 				<Form onSubmit={formik.handleSubmit}>
-					<Form.Group>
+					<Form.Group controlId="resetEmail">
 						<Form.Label>Email Address</Form.Label>
 						<Form.Control
 							type="email"
 							name="email"
+							autoComplete="email"
 							onChange={formik.handleChange}
+							onBlur={formik.handleBlur}
 							value={formik.values.email}
-							isInvalid={!!formik.errors.email}
+							isInvalid={formik.touched.email && !!formik.errors.email}
 						/>
 						<Form.Control.Feedback type="invalid">
 							{formik.errors.email}
 						</Form.Control.Feedback>
 					</Form.Group>
-					<Button type="submit" className="mt-3">
+					<Button type="submit" className="mt-3" disabled={formik.isSubmitting}>
 						Send Reset Link
 					</Button>
 				</Form>
