@@ -46,11 +46,10 @@ ArthriHealth is a dissertation project that provides a comprehensive web applica
 
 - **Font Awesome** 6.5.2 - Icon library
 - **Moment.js** 2.30.1 - Date/time manipulation
-- **UUID** 9.0.1 - Unique identifier generation
 
 ### Testing
 
-- **React Testing Library** 13.4.0 - Component testing
+- **React Testing Library** 14 - Component testing
 - **Jest** (via react-scripts) - Test runner
 
 ---
@@ -102,8 +101,10 @@ It also showcases practical full‑stack engineering skills, including UI design
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+- Node.js 18 or higher
+- npm
+- A Firebase project with Email/Password auth, Firestore and Storage enabled
+- [Firebase CLI](https://firebase.google.com/docs/cli) (for deploying rules and hosting)
 
 ### Installation
 
@@ -112,4 +113,58 @@ It also showcases practical full‑stack engineering skills, including UI design
 ```bash
 git clone https://github.com/MCoding90/ArthriHealth.git
 cd ArthriHealth
+```
+
+2. Install dependencies:
+
+```bash
+npm ci
+```
+
+3. Configure Firebase: copy `.env.example` to `.env.local` and fill in the values from
+   Firebase console → Project settings → Your apps.
+
+```bash
+cp .env.example .env.local
+```
+
+4. Start the dev server:
+
+```bash
+npm start
+```
+
+### Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm start` | Run the app at http://localhost:3000 |
+| `npm test` | Run the test suite (Jest + React Testing Library) |
+| `npm run build` | Production build into `build/` |
+
+### Security rules
+
+Access control lives in `firestore.rules` and `storage.rules`: each user can only read and write
+their own `Users/{uid}` document and sub-collections, and only after verifying their email.
+Profile pictures are limited to images under 2 MB.
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+### Deployment
+
+**Firebase Hosting**
+
+```bash
+npm run build
+firebase deploy --only hosting
+```
+
+**Docker** (static build served by nginx)
+
+```bash
+# values are read from your shell / .env file
+docker compose up --build
+# → http://localhost:8080
 ```
