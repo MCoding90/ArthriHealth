@@ -1,6 +1,6 @@
 import React from "react";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../Header.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,6 +13,8 @@ import {
 	faSignOutAlt,
 	faUserPlus,
 	faUserCircle,
+	faGaugeHigh,
+	faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
 
 const links = [
@@ -23,16 +25,16 @@ const links = [
 
 const Header = () => {
 	const location = useLocation();
+	const navigate = useNavigate();
 	const { currentUser, logout } = useAuth();
 
-	const handleLogout = () => {
-		logout()
-			.then(() => {
-				console.log("Logged out successfully!");
-			})
-			.catch((error) => {
-				console.error("Logout failed: ", error);
-			});
+	const handleLogout = async () => {
+		try {
+			await logout();
+			navigate("/", { replace: true });
+		} catch {
+			navigate("/logout"); // Logout page shows the error and lets the user retry.
+		}
 	};
 
 	return (
@@ -92,6 +94,24 @@ const Header = () => {
 								</>
 							)}
 							{currentUser && (
+								<>
+									<NavDropdown.Item
+										as={Link}
+										to="/userpage"
+										active={location.pathname === "/userpage"}
+									>
+										<FontAwesomeIcon icon={faGaugeHigh} className="dropdown-icon" />
+										Dashboard
+									</NavDropdown.Item>
+									<NavDropdown.Item
+										as={Link}
+										to="/profile"
+										active={location.pathname === "/profile"}
+									>
+										<FontAwesomeIcon icon={faIdCard} className="dropdown-icon" />
+										Profile
+									</NavDropdown.Item>
+									<NavDropdown.Divider />
 								<NavDropdown.Item onClick={handleLogout}>
 									<FontAwesomeIcon
 										icon={faSignOutAlt}
@@ -99,6 +119,7 @@ const Header = () => {
 									/>
 									Logout
 								</NavDropdown.Item>
+								</>
 							)}
 						</NavDropdown>
 					</Nav>

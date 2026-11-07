@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute, { GuestRoute } from "./components/ProtectedRoute";
 import Layout from "./pages/Layout";
 import LoadingSpinner from "./components/LoadingSpinner";
 
@@ -15,6 +15,8 @@ const HealthTips = lazy(() => import("./pages/HealthTips"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const LogoutPage = lazy(() => import("./pages/LogoutPage"));
+const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 export default function App() {
 	return (
@@ -22,87 +24,23 @@ export default function App() {
 			<AuthProvider>
 				<Suspense fallback={<LoadingSpinner />}>
 					<Routes>
-						<Route
-							path="/"
-							element={
-								<Layout>
-									<HomePage />
-								</Layout>
-							}
-						/>
-						<Route
-							path="/lifestyle-management"
-							element={
-								<Layout>
-									<LifeStylePage />
-								</Layout>
-							}
-						/>
-						<Route
-							path="/login"
-							element={
-								<Layout>
-									<LoginPage />
-								</Layout>
-							}
-						/>
-						<Route
-							path="/signup"
-							element={
-								<Layout>
-									<SignUpPage />
-								</Layout>
-							}
-						/>
-						<Route
-							path="/logout"
-							element={
-								<Layout>
-									<LogoutPage />
-								</Layout>
-							}
-						/>
-						<Route element={<ProtectedRoute />}>
-							<Route
-								path="/health-tips"
-								element={
-									<Layout>
-										<HealthTips />
-									</Layout>
-								}
-							/>
-							<Route
-								path="/symptom-tracker"
-								element={
-									<Layout>
-										<SymptomTracker />
-									</Layout>
-								}
-							/>
-							<Route
-								path="/medication-page"
-								element={
-									<Layout>
-										<MedicationPage />
-									</Layout>
-								}
-							/>
-							<Route
-								path="/userpage"
-								element={
-									<Layout>
-										<UserPage />
-									</Layout>
-								}
-							/>
-							<Route
-								path="/profile"
-								element={
-									<Layout>
-										<UserProfile />
-									</Layout>
-								}
-							/>
+						<Route element={<Layout />}>
+							<Route path="/" element={<HomePage />} />
+							<Route path="/lifestyle-management" element={<LifeStylePage />} />
+							<Route path="/logout" element={<LogoutPage />} />
+							<Route path="/verify-email" element={<VerifyEmailPage />} />
+							<Route element={<GuestRoute />}>
+								<Route path="/login" element={<LoginPage />} />
+								<Route path="/signup" element={<SignUpPage />} />
+							</Route>
+							<Route element={<ProtectedRoute />}>
+								<Route path="/health-tips" element={<HealthTips />} />
+								<Route path="/symptom-tracker" element={<SymptomTracker />} />
+								<Route path="/medication-page" element={<MedicationPage />} />
+								<Route path="/userpage" element={<UserPage />} />
+								<Route path="/profile" element={<UserProfile />} />
+							</Route>
+							<Route path="*" element={<NotFoundPage />} />
 						</Route>
 					</Routes>
 				</Suspense>
