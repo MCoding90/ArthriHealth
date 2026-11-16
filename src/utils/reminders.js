@@ -31,8 +31,10 @@ export const getReminderDates = ({ start, end, frequency, daysOfWeek = [] }) => 
 	}
 
 	const dates = [];
+	// Stop one past the limit so a typo like year 275760 can't freeze the tab; callers reject > MAX.
+	const more = (d) => d <= endDate && dates.length <= MAX_REMINDERS;
 	if (frequency === "daily") {
-		for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+		for (let d = new Date(startDate); more(d); d.setDate(d.getDate() + 1)) {
 			dates.push(new Date(d));
 		}
 	} else if (frequency === "weekly" || frequency === "fortnightly") {
@@ -40,13 +42,13 @@ export const getReminderDates = ({ start, end, frequency, daysOfWeek = [] }) => 
 		daysOfWeek.map(Number).forEach((day) => {
 			const d = new Date(startDate);
 			d.setDate(d.getDate() + ((day - d.getDay() + 7) % 7));
-			for (; d <= endDate; d.setDate(d.getDate() + step)) {
+			for (; more(d); d.setDate(d.getDate() + step)) {
 				dates.push(new Date(d));
 			}
 		});
 		dates.sort((a, b) => a - b);
 	} else if (frequency === "monthly") {
-		for (let i = 0, d = startDate; d <= endDate; i += 1, d = addMonthsClamped(startDate, i)) {
+		for (let i = 0, d = startDate; more(d); i += 1, d = addMonthsClamped(startDate, i)) {
 			dates.push(d);
 		}
 	}

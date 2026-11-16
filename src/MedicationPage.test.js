@@ -1,26 +1,31 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { collection, doc, onSnapshot, query, writeBatch } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, query, where, writeBatch } from "firebase/firestore";
 import MedicationPage from "./pages/Medicationpage";
 
-const mockBatch = { set: jest.fn(), commit: jest.fn() };
+const mockBatch = { set: jest.fn(), delete: jest.fn(), commit: jest.fn() };
 
 jest.mock("./firebase", () => ({ db: {} }));
 jest.mock("./context/AuthContext", () => ({
 	useAuth: () => ({ currentUser: { uid: "user-1", emailVerified: true } }),
 }));
-jest.mock("./pages/MedicationReminder", () => ({ events }) => (
-	<div>{events.length} reminders</div>
+jest.mock("./pages/MedicationReminder", () => ({ events, onDelete }) => (
+	<div>
+		{events.length} reminders
+		<button onClick={() => onDelete({ id: "r1", seriesId: "s1" }, true)}>delete series</button>
+	</div>
 ));
 jest.mock("firebase/firestore", () => ({
 	collection: jest.fn(),
 	doc: jest.fn(),
 	query: jest.fn(),
+	where: jest.fn(),
 	orderBy: jest.fn(),
 	onSnapshot: jest.fn(),
 	writeBatch: jest.fn(),
 	deleteDoc: jest.fn(),
+	getDocs: jest.fn(),
 }));
 
 const fillBase = (frequency, end) => {
@@ -64,8 +69,17 @@ it("saves daily reminders in a single batch", async () => {
 it("rejects schedules that would create too many reminders", async () => {
 	fillBase("daily", "2032-01-01T09:00");
 	userEvent.click(screen.getByRole("button", { name: /Add Reminder/ }));
-	expect(await screen.findByText(/max 500/)).toBeInTheDocument();
+	expect(await screen.findByText(/more than 500/)).toBeInTheDocument();
 	expect(mockBatch.commit).not.toHaveBeenCalled();
+});
+
+it("deletes every reminder in a series in one batch", async () => {
+	getDocs.mockResolvedValue({ docs: [{ ref: "a" }, { ref: "b" }] });
+	userEvent.click(screen.getByRole("button", { name: "delete series" }));
+
+	await waitFor(() => expect(mockBatch.commit).toHaveBeenCalledTimes(1));
+	expect(where).toHaveBeenCalledWith("seriesId", "==", "s1");
+	expect(mockBatch.delete.mock.calls).toEqual([["a"], ["b"]]);
 });
 
 it("shows an error when saving fails", async () => {

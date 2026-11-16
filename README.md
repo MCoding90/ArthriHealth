@@ -164,7 +164,7 @@ firebase deploy --only hosting
 **Docker** (static build served by nginx)
 
 ```bash
-# values are read from your shell / .env file
-docker compose up --build
+# Firebase keys are baked in at build time; compose only reads .env by default
+docker compose --env-file .env.local up --build
 # → http://localhost:8080
 ```

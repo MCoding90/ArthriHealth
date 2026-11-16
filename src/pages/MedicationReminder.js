@@ -24,11 +24,11 @@ const MedicationReminder = ({ events, onDelete }) => {
 		setError("");
 	};
 
-	const handleDelete = async () => {
+	const handleDelete = async (wholeSeries) => {
 		setDeleting(true);
 		setError("");
 		try {
-			await onDelete(selectedEvent);
+			await onDelete(selectedEvent, wholeSeries);
 			closeModal();
 		} catch {
 			setError("Could not delete this reminder. Please try again.");
@@ -80,10 +80,20 @@ const MedicationReminder = ({ events, onDelete }) => {
 				</Modal.Body>
 				{onDelete && (
 					<Modal.Footer>
-						<Button variant="outline-danger" onClick={handleDelete} disabled={deleting}>
+						<Button
+							variant="outline-danger"
+							onClick={() => handleDelete(false)}
+							disabled={deleting}
+						>
 							<FontAwesomeIcon icon={faTrash} className="me-2" aria-hidden="true" />
 							{deleting ? "Deleting..." : "Delete this reminder"}
 						</Button>
+						{/* Reminders saved before series existed have no seriesId. */}
+						{selectedEvent?.seriesId && (
+							<Button variant="danger" onClick={() => handleDelete(true)} disabled={deleting}>
+								Delete whole series
+							</Button>
+						)}
 					</Modal.Footer>
 				)}
 			</Modal>
