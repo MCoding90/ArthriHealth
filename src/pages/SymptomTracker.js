@@ -163,7 +163,6 @@ const SymptomTracker = () => {
 								value={formInput.symptom}
 								onChange={handleInputChange}
 								maxLength={100}
-								aria-label="Symptom input"
 							/>
 						</Form.Group>
 						<Form.Group controlId="dateInput" className="mb-3">
@@ -176,7 +175,6 @@ const SymptomTracker = () => {
 								name="date"
 								value={formInput.date}
 								onChange={handleInputChange}
-								aria-label="Date input"
 							/>
 						</Form.Group>
 						<Form.Group controlId="severityInput" className="mb-3">
@@ -193,7 +191,6 @@ const SymptomTracker = () => {
 								min="1"
 								max="10"
 								step="1"
-								aria-label="Severity input"
 							/>
 						</Form.Group>
 						<Form.Group controlId="notesInput" className="mb-3">
@@ -209,14 +206,12 @@ const SymptomTracker = () => {
 								onChange={handleInputChange}
 								rows={3}
 								maxLength={1000}
-								aria-label="Notes input"
 							/>
 						</Form.Group>
 						<Button
 							variant="primary"
 							type="submit"
 							disabled={submitting}
-							aria-label="Submit symptom"
 						>
 							<FontAwesomeIcon icon={faPlusCircle} className="me-2" />
 							{editing ? "Update Symptom" : "Add Symptom"}

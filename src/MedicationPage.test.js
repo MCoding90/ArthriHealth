@@ -66,6 +66,17 @@ it("saves daily reminders in a single batch", async () => {
 	expect(mockBatch.commit).toHaveBeenCalledTimes(1);
 });
 
+it("lets several weekdays be ticked with plain clicks", async () => {
+	fillBase("weekly", "2030-01-14T09:00"); // 2030-01-01 is a Tuesday
+	userEvent.click(screen.getByLabelText("Monday"));
+	userEvent.click(screen.getByLabelText("Wednesday"));
+	userEvent.click(screen.getByRole("button", { name: /Add Reminder/ }));
+
+	// Wed 2, Mon 7, Wed 9, Mon 14
+	expect(await screen.findByText("4 reminders added successfully!")).toBeInTheDocument();
+	expect(mockBatch.set).toHaveBeenCalledTimes(4);
+});
+
 it("rejects schedules that would create too many reminders", async () => {
 	fillBase("daily", "2032-01-01T09:00");
 	userEvent.click(screen.getByRole("button", { name: /Add Reminder/ }));
