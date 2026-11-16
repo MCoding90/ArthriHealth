@@ -6,7 +6,7 @@ A web application designed for managing arthritis health data and monitoring. Bu
 
 ArthriHealth is a dissertation project that provides a comprehensive web application for arthritis health management. The application helps users track their health metrics, manage medication schedules, and monitor their arthritis condition over time.
 
-**Live Application**: https://myapp-8439e.web.app/
+**Live Application**: https://rawebapp-80c38.web.app/
 
 ## Features
 
@@ -159,9 +159,9 @@ production build. Every push to `master` does the same, then deploys hosting, Fi
 Storage rules to Firebase. One-time setup in GitHub → Settings → Secrets and variables → Actions:
 
 - **Variables:** the six `REACT_APP_FIREBASE_*` values from `.env.local`.
-- **Secret `FIREBASE_SERVICE_ACCOUNT_MYAPP_8439E`:** the JSON key of the `github-action-…` service
-  account that `firebase init hosting:github` created. Besides its hosting roles it needs
-  *Firebase Rules Admin* to deploy the security rules (Google Cloud console → IAM).
+- **Secret `FIREBASE_SERVICE_ACCOUNT`:** a JSON key for a service account in the app's Firebase
+  project with the roles *Firebase Hosting Admin*, *Firebase Rules Admin*, *Cloud Storage for
+  Firebase Viewer* and *Service Usage Consumer* (Google Cloud console → IAM → Service accounts).
 
 **Firebase Hosting** (manual)
 

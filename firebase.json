@@ -7,7 +7,6 @@
 		"rules": "storage.rules"
 	},
 	"hosting": {
-		"site": "myapp-8439e",
 		"public": "build",
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
 		"headers": [

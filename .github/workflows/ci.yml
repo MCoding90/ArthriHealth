@@ -49,8 +49,7 @@ jobs:
         if: github.event_name == 'push'
         uses: google-github-actions/auth@v2
         with:
-          # Created earlier by `firebase init hosting:github`
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MYAPP_8439E }}
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       # Rules ship with the app so production security always matches master.
       - name: Deploy to Firebase
