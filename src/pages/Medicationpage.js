@@ -14,10 +14,12 @@ import {
 	collection,
 	doc,
 	query,
+	where,
 	orderBy,
 	onSnapshot,
 	writeBatch,
 	deleteDoc,
+	getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -48,7 +50,10 @@ const MedicationPage = () => {
 
 	useEffect(() => {
 		const medsRef = collection(db, "Users", currentUser.uid, "medications");
-		const q = query(medsRef, orderBy("start", "asc"));
+		// Reads grow with history otherwise; reminders older than a month are not shown.
+		const since = new Date();
+		since.setMonth(since.getMonth() - 1);
+		const q = query(medsRef, where("start", ">=", since), orderBy("start", "asc"));
 		return onSnapshot(
 			q,
 			(snapshot) => {
@@ -103,7 +108,7 @@ const MedicationPage = () => {
 		if (dates.length > MAX_REMINDERS) {
 			setStatus({
 				variant: "danger",
-				message: `That schedule creates ${dates.length} reminders (max ${MAX_REMINDERS}). Please shorten the date range.`,
+				message: `That schedule creates more than ${MAX_REMINDERS} reminders. Please shorten the date range.`,
 			});
 			return;
 		}
@@ -119,7 +124,8 @@ const MedicationPage = () => {
 		try {
 			const medsRef = collection(db, "Users", currentUser.uid, "medications");
 			const batch = writeBatch(db);
-			reminders.forEach((reminder) => batch.set(doc(medsRef), reminder));
+			const seriesId = doc(medsRef).id;
+			reminders.forEach((reminder) => batch.set(doc(medsRef), { ...reminder, seriesId }));
 			await batch.commit();
 			setStatus({
 				variant: "success",
@@ -133,8 +139,14 @@ const MedicationPage = () => {
 		}
 	};
 
-	const handleDelete = async (event) => {
-		await deleteDoc(doc(db, "Users", currentUser.uid, "medications", event.id));
+	const handleDelete = async (event, wholeSeries) => {
+		const medsRef = collection(db, "Users", currentUser.uid, "medications");
+		if (!wholeSeries) return deleteDoc(doc(medsRef, event.id));
+		// A series is at most MAX_REMINDERS docs, so one batch fits.
+		const snap = await getDocs(query(medsRef, where("seriesId", "==", event.seriesId)));
+		const batch = writeBatch(db);
+		snap.docs.forEach((d) => batch.delete(d.ref));
+		await batch.commit();
 	};
 
 	return (

@@ -1,4 +1,9 @@
-import { getReminderDates, buildReminders, toLocalDateTimeInput } from "./reminders";
+import {
+	MAX_REMINDERS,
+	getReminderDates,
+	buildReminders,
+	toLocalDateTimeInput,
+} from "./reminders";
 
 const fmt = (dates) => dates.map((d) => toLocalDateTimeInput(d));
 
@@ -50,6 +55,15 @@ describe("getReminderDates", () => {
 			"2025-03-31T10:00",
 			"2025-04-30T10:00",
 		]);
+	});
+
+	it("stops one past MAX_REMINDERS for huge ranges", () => {
+		const dates = getReminderDates({
+			start: "2025-01-01T09:00",
+			end: "9999-12-31T09:00",
+			frequency: "daily",
+		});
+		expect(dates).toHaveLength(MAX_REMINDERS + 1);
 	});
 
 	it("returns nothing for an invalid or reversed range", () => {
