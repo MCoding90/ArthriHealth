@@ -1,14 +1,5 @@
 {
 	"projects": {
-		"default": "myapp-8439e"
-	},
-	"targets": {
-		"myapp-8439e": {
-			"hosting": {
-				"myapp-8439e": [
-					"myapp-8439e"
-				]
-			}
-		}
+		"default": "rawebapp-80c38"
 	}
 }
