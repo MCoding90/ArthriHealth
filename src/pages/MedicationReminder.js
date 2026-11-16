@@ -14,16 +14,6 @@ import {
 
 const localizer = momentLocalizer(moment);
 
-// react-big-calendar draws events as plain divs Tab can't reach; a button's click bubbles to onSelectEvent.
-const EventButton = ({ title }) => (
-	<button
-		type="button"
-		className="btn btn-link p-0 border-0 w-100 text-start text-truncate text-reset text-decoration-none"
-	>
-		{title}
-	</button>
-);
-
 const MedicationReminder = ({ events, onDelete }) => {
 	const [selectedEvent, setSelectedEvent] = useState(null);
 	const [deleting, setDeleting] = useState(false);
@@ -61,7 +51,6 @@ const MedicationReminder = ({ events, onDelete }) => {
 				endAccessor="end"
 				style={{ height: 500 }}
 				onSelectEvent={setSelectedEvent}
-				components={{ event: EventButton }}
 			/>
 			<Modal show={!!selectedEvent} onHide={closeModal}>
 				<Modal.Header closeButton>

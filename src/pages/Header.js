@@ -38,7 +38,7 @@ const Header = () => {
 	};
 
 	return (
-		<Navbar expand="md" variant="dark" className="custom-navbar">
+		<Navbar expand="md" className="custom-navbar">
 			<Container>
 				<Navbar.Brand as={Link} to="/" className="navbar-brand">
 					<FontAwesomeIcon icon={faHouseMedical} className="icon-style" />

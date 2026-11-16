@@ -207,28 +207,26 @@ const MedicationPage = () => {
 					</Form.Select>
 				</Form.Group>
 				{isWeekly && (
-					<Form.Group as="fieldset" className="mb-3">
-						<Form.Label as="legend" className="fs-6">
+					<Form.Group className="mb-3" controlId="daysOfWeek">
+						<Form.Label>
 							<FontAwesomeIcon icon={faCalendarDay} className="me-2" />
 							Day(s) of the Week
 						</Form.Label>
-						{DAYS.map((day, i) => (
-							<Form.Check
-								key={day}
-								inline
-								type="checkbox"
-								id={`day-${i}`}
-								label={day}
-								checked={selectedDays.includes(String(i))}
-								onChange={(e) =>
-									setSelectedDays((prev) =>
-										e.target.checked
-											? [...prev, String(i)]
-											: prev.filter((d) => d !== String(i))
-									)
-								}
-							/>
-						))}
+						<Form.Select
+							multiple
+							value={selectedDays}
+							onChange={(e) =>
+								setSelectedDays([...e.target.selectedOptions].map((o) => o.value))
+							}
+							required
+						>
+							{DAYS.map((day, i) => (
+								<option key={day} value={String(i)}>
+									{day}
+								</option>
+							))}
+						</Form.Select>
+						<Form.Text>Hold Ctrl / Cmd to select several days.</Form.Text>
 					</Form.Group>
 				)}
 				<Form.Group className="mb-3" controlId="startTime">

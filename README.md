@@ -154,16 +154,7 @@ firebase deploy --only firestore:rules,storage
 
 ### Deployment
 
-**CI/CD** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): every pull request runs the tests and a
-production build. Every push to `master` does the same, then deploys hosting, Firestore rules and
-Storage rules to Firebase. One-time setup in GitHub → Settings → Secrets and variables → Actions:
-
-- **Variables:** the six `REACT_APP_FIREBASE_*` values from `.env.local`.
-- **Secret `FIREBASE_SERVICE_ACCOUNT_MYAPP_8439E`:** the JSON key of the `github-action-…` service
-  account that `firebase init hosting:github` created. Besides its hosting roles it needs
-  *Firebase Rules Admin* to deploy the security rules (Google Cloud console → IAM).
-
-**Firebase Hosting** (manual)
+**Firebase Hosting**
 
 ```bash
 npm run build

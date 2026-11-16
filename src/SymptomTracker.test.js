@@ -51,17 +51,17 @@ beforeEach(() => {
 
 it("validates required fields", async () => {
 	render(<SymptomTracker />);
-	userEvent.click(screen.getByRole("button", { name: "Add Symptom" }));
+	userEvent.click(screen.getByLabelText("Submit symptom"));
 	expect(await screen.findByText("Please enter a symptom and a date.")).toBeInTheDocument();
 	expect(addDoc).not.toHaveBeenCalled();
 });
 
 it("rejects out-of-range severity", async () => {
 	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Enter Symptom:"), "Stiffness");
-	userEvent.type(screen.getByLabelText("Enter Date:"), "2025-01-01");
-	userEvent.type(screen.getByLabelText("Severity (1-10):"), "11");
-	userEvent.click(screen.getByRole("button", { name: "Add Symptom" }));
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.type(screen.getByLabelText("Severity input"), "11");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
 	expect(
 		await screen.findByText("Severity must be a whole number from 1 to 10.")
 	).toBeInTheDocument();
@@ -69,10 +69,10 @@ it("rejects out-of-range severity", async () => {
 
 it("adds a symptom with a numeric severity and clears the form", async () => {
 	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Enter Symptom:"), "Stiffness");
-	userEvent.type(screen.getByLabelText("Enter Date:"), "2025-01-01");
-	userEvent.type(screen.getByLabelText("Severity (1-10):"), "6");
-	userEvent.click(screen.getByRole("button", { name: "Add Symptom" }));
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.type(screen.getByLabelText("Severity input"), "6");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
 
 	expect(await screen.findByText("Symptom added successfully!")).toBeInTheDocument();
 	expect(addDoc).toHaveBeenCalledWith("symptoms-ref", {
@@ -82,15 +82,15 @@ it("adds a symptom with a numeric severity and clears the form", async () => {
 		notes: "",
 		user: "user-1",
 	});
-	expect(screen.getByLabelText("Enter Symptom:")).toHaveValue("");
+	expect(screen.getByLabelText("Symptom input")).toHaveValue("");
 });
 
 it("shows an error when saving fails", async () => {
 	addDoc.mockRejectedValueOnce(new Error("permission-denied"));
 	render(<SymptomTracker />);
-	userEvent.type(screen.getByLabelText("Enter Symptom:"), "Stiffness");
-	userEvent.type(screen.getByLabelText("Enter Date:"), "2025-01-01");
-	userEvent.click(screen.getByRole("button", { name: "Add Symptom" }));
+	userEvent.type(screen.getByLabelText("Symptom input"), "Stiffness");
+	userEvent.type(screen.getByLabelText("Date input"), "2025-01-01");
+	userEvent.click(screen.getByLabelText("Submit symptom"));
 	expect(
 		await screen.findByText("Could not save the symptom. Please try again.")
 	).toBeInTheDocument();
@@ -101,9 +101,9 @@ it("updates only editable fields when editing", async () => {
 	emit([{ id: "s1", symptom: "Pain", date: "2025-01-02", severity: 4, notes: "", user: "user-1" }]);
 
 	userEvent.click(screen.getByLabelText("Edit symptom recorded on 2025-01-02"));
-	userEvent.clear(screen.getByLabelText("Severity (1-10):"));
-	userEvent.type(screen.getByLabelText("Severity (1-10):"), "7");
-	userEvent.click(screen.getByRole("button", { name: "Update Symptom" }));
+	userEvent.clear(screen.getByLabelText("Severity input"));
+	userEvent.type(screen.getByLabelText("Severity input"), "7");
+	userEvent.click(screen.getByText("Update Symptom"));
 
 	await waitFor(() =>
 		expect(updateDoc).toHaveBeenCalledWith("Users/user-1/symptoms/s1", {
