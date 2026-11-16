@@ -35,8 +35,10 @@ export const AuthProvider = ({ children }) => {
 	// All actions throw on failure so callers can show the error.
 	const signup = async (email, password, name) => {
 		const { user } = await createUserWithEmailAndPassword(auth, email, password);
-		if (name) await updateProfile(user, { displayName: name });
-		await sendEmailVerification(user);
+		// The account exists now: throwing would strand the user on signup ("email already in use").
+		// A lost name can be set on the profile page; /verify-email can resend the email.
+		if (name) await updateProfile(user, { displayName: name }).catch(console.error);
+		await sendEmailVerification(user).catch(console.error);
 		return user;
 	};
 
