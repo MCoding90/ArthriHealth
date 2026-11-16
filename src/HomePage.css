@@ -1,7 +1,6 @@
 .hero-section {
 	position: relative;
 	text-align: center;
-	color: white;
 }
 
 .hero-image {
@@ -17,10 +16,11 @@
 	left: 50%;
 	transform: translate(-50%, -50%); /* Center the content over the image */
 	text-align: center;
-}
-
-@media (max-width: 768px) {
-	.hero-content {
-		padding: 0 20px; /* Adds padding on smaller screens for better readability */
-	}
+	/* Light panel + dark text: white text on the yellow photo was ~1.6:1 contrast */
+	color: #212529;
+	background: rgba(255, 255, 255, 0.85);
+	padding: 1rem 1.5rem;
+	border-radius: 0.5rem;
+	width: max-content;
+	max-width: 90%;
 }

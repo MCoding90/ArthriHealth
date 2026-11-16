@@ -1,5 +1,5 @@
 .custom-navbar {
-	background-color: rgba(0, 128, 128, 0.85);
+	background-color: #006666; /* white text 6.8:1; the old 85% teal was 3.7:1 */
 }
 
 .navbar-brand,
@@ -8,7 +8,7 @@
 }
 
 .nav-link:hover {
-	background-color: rgba(255, 255, 255, 0.2);
+	background-color: rgba(0, 0, 0, 0.2); /* darken: lightening dropped white text below 4.5:1 */
 }
 
 .nav-link.active {

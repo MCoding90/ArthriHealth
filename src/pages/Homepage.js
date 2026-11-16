@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import "../HomePage.css";
 
 const customButtonStyle = {
-	backgroundColor: "rgba(0, 128, 128, 0.7)",
+	backgroundColor: "#006666", // white text 6.8:1; the old 70% teal was 2.9:1
 	color: "white",
 	border: "none",
 };
@@ -30,7 +30,7 @@ const HomePage = () => {
 			<div className="hero-section">
 				<img
 					src="/images/hero.jpg"
-					alt="Manage arthritis"
+					alt=""
 					className="hero-image"
 				/>
 				<div className="hero-content">
@@ -47,7 +47,7 @@ const HomePage = () => {
 					<Row>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="/images/symptom.jpg" />
+								<Card.Img variant="top" alt=""src="/images/symptom.jpg" />
 								<Card.Body>
 									<Card.Title>Track Symptoms</Card.Title>
 									<Card.Text>
@@ -62,7 +62,7 @@ const HomePage = () => {
 						</Col>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="/images/medication.jpg" />
+								<Card.Img variant="top" alt=""src="/images/medication.jpg" />
 								<Card.Body>
 									<Card.Title>Medication Reminders</Card.Title>
 									<Card.Text>
@@ -76,7 +76,7 @@ const HomePage = () => {
 						</Col>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="/images/education.jpg" />
+								<Card.Img variant="top" alt=""src="/images/education.jpg" />
 								<Card.Body>
 									<Card.Title>Educational Resources</Card.Title>
 									<Card.Text>
@@ -91,7 +91,7 @@ const HomePage = () => {
 						</Col>
 						<Col md={6} lg={3} className="mb-4">
 							<Card>
-								<Card.Img variant="top" src="/images/lifestyle.jpg" />
+								<Card.Img variant="top" alt=""src="/images/lifestyle.jpg" />
 								<Card.Body>
 									<Card.Title>Lifestyle Management Tools</Card.Title>
 									<Card.Text>
